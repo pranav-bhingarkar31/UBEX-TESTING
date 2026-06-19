@@ -4,6 +4,13 @@ import crypto from "crypto";
 
 dotenv.config();
 
+// Auto-detect production environment (e.g. Railway, container service)
+if (process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_STATIC_URL) {
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = "production";
+  }
+}
+
 // Apply smart development fallbacks using CRYPTOGRAPHICALLY SECURE runtime-generated values if they are not provided, weak, or set to static fallbacks
 if (process.env.NODE_ENV !== "production") {
   const needsJwtGen = !process.env.JWT_SECRET || 

@@ -507,7 +507,12 @@ app.get("/api/health", async (req, res) => {
     database: dbOk,
     smtp: smtpOk,
     inquiryEngine: true,
-    environment: process.env.NODE_ENV || "development"
+    environment: process.env.NODE_ENV || "development",
+    nodeEnv: process.env.NODE_ENV,
+    railwayEnvironment: process.env.RAILWAY_ENVIRONMENT_NAME || null,
+    productionMode: process.env.NODE_ENV === "production",
+    databaseConnected: dbOk,
+    smtpConfigured: smtpConfigured
   });
 });
 
@@ -1495,7 +1500,12 @@ app.use(errorHandler);
 
 // Configure Vite middleware in development or static hosting in production
 async function startServer() {
+  console.log("[STARTUP] NODE_ENV =", process.env.NODE_ENV);
+  console.log("[STARTUP] Production Mode =", process.env.NODE_ENV === "production");
+  console.log("[STARTUP] Using Vite Middleware =", process.env.NODE_ENV !== "production");
+
   if (process.env.NODE_ENV !== "production") {
+    console.log("[STARTUP] Vite allowedHosts enabled");
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: {
