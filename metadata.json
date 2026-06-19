@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: Remix: Remix: Remix: Remix: Remix: Remix: Remix: UbEx Experiences",
+  "description": "Premium stays, curated local experiences, river rafting, bungees, and custom local guide AI in Rishikesh.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
