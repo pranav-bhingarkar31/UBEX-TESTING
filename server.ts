@@ -1517,6 +1517,13 @@ async function startServer() {
     console.log("\n--- STARTING SYSTEM ENV & SERVICE CONFIG CHECK ---");
 
     // Check critical env vars
+    const nodeEnv = process.env.NODE_ENV;
+    if (nodeEnv) {
+      console.log(`[CONFIG CHECK] NODE_ENV: ${nodeEnv} ✓`);
+    } else {
+      console.warn("[WARNING Check] NODE_ENV is not explicitly set; defaulting to development");
+    }
+
     const jwtOk = !!(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 64);
     const csrfOk = !!(process.env.CSRF_SECRET && process.env.CSRF_SECRET.length >= 64);
     
@@ -1537,14 +1544,19 @@ async function startServer() {
     // Database check
     const sqlHost = process.env.SQL_HOST;
     const sqlDb = process.env.SQL_DB_NAME;
+    const sqlUser = process.env.SQL_ADMIN_USER;
+    const sqlPass = process.env.SQL_ADMIN_PASSWORD;
     const dbConfigured = !!(sqlHost && sqlDb);
 
-    let dbOk = false;
     if (dbConfigured) {
+      if (sqlHost) console.log("[CONFIG CHECK] SQL_HOST ✓");
+      if (sqlDb) console.log("[CONFIG CHECK] SQL_DB_NAME ✓");
+      if (sqlUser) console.log("[CONFIG CHECK] SQL_ADMIN_USER ✓");
+      if (sqlPass) console.log("[CONFIG CHECK] SQL_ADMIN_PASSWORD ✓");
+
       try {
-        dbOk = await checkDatabaseHealth();
+        const dbOk = await checkDatabaseHealth();
         if (dbOk) {
-          console.log("[CONFIG CHECK] Database Connection ✓");
           console.log("[DATABASE] Connected Successfully");
         } else {
           console.error("[DATABASE ERROR] Connection Failed");
@@ -1558,16 +1570,23 @@ async function startServer() {
     } else {
       console.log("[CONFIG CHECK] Database Connection ✓ (Sandbox File Store fallback Active)");
       console.log("[DATABASE] Connected Successfully");
-      dbOk = true;
     }
 
     // SMTP check
-    const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-    let smtpOk = false;
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = process.env.SMTP_PORT;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpConfigured = !!(smtpHost && smtpUser && smtpPass);
+
     if (smtpConfigured) {
-      console.log("[CONFIG CHECK] SMTP_USER ✓");
+      if (smtpHost) console.log("[CONFIG CHECK] SMTP_HOST ✓");
+      if (smtpPort) console.log("[CONFIG CHECK] SMTP_PORT ✓");
+      if (smtpUser) console.log("[CONFIG CHECK] SMTP_USER ✓");
+      if (smtpPass) console.log("[CONFIG CHECK] SMTP_PASS ✓");
+
       try {
-        smtpOk = await EmailService.verifySmtpConnection();
+        const smtpOk = await EmailService.verifySmtpConnection();
         if (smtpOk) {
           console.log("[SMTP] Ready");
         } else {
