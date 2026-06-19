@@ -35,7 +35,8 @@ import {
   RefreshCw,
   Database,
   FileSpreadsheet,
-  Lock
+  Lock,
+  Mail
 } from "lucide-react";
 import { EXPERIENCES, STAYS, REVIEWS, RECURRING_EVENTS, COMMUNITY_EVENTS } from "./data";
 import { getWhatsAppNumber, getSupportEmail } from "./utils/contact";
@@ -724,7 +725,9 @@ export default function App() {
   // Compulsory Phone & Multi-Provider Auth Modal states
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginStep, setLoginStep] = useState<"phone" | "otp" | "identity">("phone");
+  const [loginMethod, setLoginMethod] = useState<"phone" | "email">("email");
   const [loginPhone, setLoginPhone] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
   const [loginCountryCode, setLoginCountryCode] = useState("+91");
   const [loginOtp, setLoginOtp] = useState("");
   const [generatedOtp, setGeneratedOtp] = useState("");
@@ -774,9 +777,10 @@ export default function App() {
   };
 
   const handleSignIn = () => {
-    // Override directly into the compulsory OTP phone authentication wizard
     setLoginStep("phone");
+    setLoginMethod("email");
     setLoginPhone("");
+    setLoginEmail("");
     setLoginOtp("");
     setGeneratedOtp("");
     setOtpError("");
@@ -784,9 +788,16 @@ export default function App() {
   };
 
   const handleSendOtp = () => {
-    if (!loginPhone || loginPhone.trim().length < 8) {
-      setOtpError("Please enter a valid compulsory mobile number");
-      return;
+    if (loginMethod === "phone") {
+      if (!loginPhone || loginPhone.trim().length < 8) {
+        setOtpError("Please enter a valid compulsory mobile number");
+        return;
+      }
+    } else {
+      if (!loginEmail || !loginEmail.includes("@") || loginEmail.length < 5) {
+        setOtpError("Please enter a valid email address");
+        return;
+      }
     }
     setIsOtpSending(true);
     setOtpError("");
@@ -797,7 +808,11 @@ export default function App() {
       setGeneratedOtp(code);
       setIsOtpSending(false);
       setLoginStep("otp");
-      console.log(`[UbEx SECURE SMS LOCK] OTP code for ${loginCountryCode} ${loginPhone}: [ ${code} ]`);
+      if (loginMethod === "phone") {
+        console.log(`[UbEx SECURE SMS LOCK] OTP code for ${loginCountryCode} ${loginPhone}: [ ${code} ]`);
+      } else {
+        console.log(`[UbEx SECURE EMAIL LOCK] OTP code for ${loginEmail}: [ ${code} ]`);
+      }
     }, 800);
   };
 
@@ -817,14 +832,14 @@ export default function App() {
       if (credential?.accessToken) {
         setGoogleCalendarToken(credential.accessToken);
       }
-      // Enrich retrieved profile with compulsory verified phone details
+      // Enrich retrieved profile details
       setCurrentUser((prev: any) => ({
         ...prev,
         displayName: result.user.displayName || "Rishikesh Explorer",
-        email: result.user.email || "explore@ubex.com",
+        email: result.user.email || loginEmail || "explore@ubex.com",
         photoURL: result.user.photoURL,
-        phoneNumber: `${loginCountryCode} ${loginPhone}`,
-        phoneVerified: true
+        phoneNumber: loginPhone ? `${loginCountryCode} ${loginPhone}` : (result.user.phoneNumber || undefined),
+        phoneVerified: !!loginPhone
       }));
       setShowLoginModal(false);
     } catch (error) {
@@ -832,10 +847,10 @@ export default function App() {
       const mockUser = {
         uid: "mock-google-user-123",
         displayName: "Raffy Explorer",
-        email: "explore@ubex.com",
+        email: loginEmail || "explore@ubex.com",
         photoURL: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150",
-        phoneNumber: `${loginCountryCode} ${loginPhone}`,
-        phoneVerified: true
+        phoneNumber: loginPhone ? `${loginCountryCode} ${loginPhone}` : undefined,
+        phoneVerified: !!loginPhone
       };
       setCurrentUser(mockUser);
       setUserToken("mock-token-abc");
@@ -848,13 +863,40 @@ export default function App() {
     const metaUser = {
       uid: "mock-meta-user-888",
       displayName: "Zuck Alpinist",
-      email: "meta.adventures@ubex.com",
+      email: loginEmail || "meta.adventures@ubex.com",
       photoURL: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150",
-      phoneNumber: `${loginCountryCode} ${loginPhone}`,
-      phoneVerified: true
+      phoneNumber: loginPhone ? `${loginCountryCode} ${loginPhone}` : undefined,
+      phoneVerified: !!loginPhone
     };
     setCurrentUser(metaUser);
     setUserToken("mock-meta-token");
+    setShowLoginModal(false);
+  };
+
+  const handleDirectLogin = () => {
+    if (loginMethod === "email") {
+      const namePart = loginEmail.split("@")[0] || "Traveler";
+      const beautifiedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+      const emailUser = {
+        uid: `ubex-email-user-${Math.floor(100000 + Math.random() * 900000)}`,
+        displayName: beautifiedName,
+        email: loginEmail,
+        phoneNumber: loginPhone ? `${loginCountryCode} ${loginPhone}` : undefined,
+        phoneVerified: !!loginPhone
+      };
+      setCurrentUser(emailUser);
+      setUserToken(`mock-email-token-${Date.now()}`);
+    } else {
+      const phoneUser = {
+        uid: `ubex-phone-user-${Math.floor(100000 + Math.random() * 900000)}`,
+        displayName: `Explorer ${loginPhone.slice(-4)}`,
+        email: loginEmail || "explore@ubex.com",
+        phoneNumber: `${loginCountryCode} ${loginPhone}`,
+        phoneVerified: true
+      };
+      setCurrentUser(phoneUser);
+      setUserToken(`mock-phone-token-${Date.now()}`);
+    }
     setShowLoginModal(false);
   };
 
@@ -5135,49 +5177,98 @@ export default function App() {
                 🔒
               </div>
               <h3 className="text-xl font-bold font-display text-white tracking-wide">
-                {loginStep === "phone" && "Secure Phone Setup"}
+                {loginStep === "phone" && (loginMethod === "email" ? "Secure Email Verification" : "Secure Phone Setup")}
                 {loginStep === "otp" && "Verify OTP Code"}
                 {loginStep === "identity" && "Connect Social Profile"}
               </h3>
-              <p className="text-xs text-slate-400 mt-1.5 max-w-xs">
-                {loginStep === "phone" && "Rishikesh police protocol requires a compulsory phone verification for adventure bookings."}
-                {loginStep === "otp" && "A compulsory verification code was dispatched to your mobile device."}
+              <p className="text-xs text-slate-400 mt-1.5 max-w-xs font-sans">
+                {loginStep === "phone" && (loginMethod === "email" ? "Please verify your email address with a secure OTP code to sign in." : "Rishikesh police protocol requires a compulsory phone verification for adventure bookings.")}
+                {loginStep === "otp" && (loginMethod === "email" ? "A compulsory verification code was dispatched to your email inbox." : "A compulsory verification code was dispatched to your mobile device.")}
                 {loginStep === "identity" && "Verified! Choose your identity provider to complete your UbEx traveler registration."}
               </p>
             </div>
 
-            {/* STEP 1: Phone submission (Compulsory) */}
+            {/* STEP 1: Email or Phone submission */}
             {loginStep === "phone" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[11px] font-black uppercase text-indigo-400 tracking-wider mb-2">Compulsory Mobile Number</label>
-                  <div className="flex gap-2">
-                    <select 
-                      value={loginCountryCode} 
-                      onChange={(e) => setLoginCountryCode(e.target.value)}
-                      className="bg-slate-950 border border-white/10 text-white rounded-xl px-2.5 py-3 text-xs font-semibold focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="+91">🇮🇳 +91 (IN)</option>
-                      <option value="+1">🇺🇸 +1 (US)</option>
-                      <option value="+44">🇬🇧 +44 (UK)</option>
-                      <option value="+7">🇷🇺 +7 (RU)</option>
-                      <option value="+971">🇦🇪 +971 (AE)</option>
-                      <option value="+49">🇩🇪 +49 (DE)</option>
-                      <option value="+61">🇦🇺 +61 (AU)</option>
-                    </select>
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"><Phone className="w-4 h-4" /></span>
+              <div className="space-y-4 font-sans">
+                {/* Visual Tab Switcher */}
+                <div className="flex bg-slate-950/60 p-1 rounded-xl border border-white/5 mb-2 select-none">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginMethod("email");
+                      setOtpError("");
+                    }}
+                    className={`flex-1 py-2 text-[11px] font-bold rounded-lg transition-all border-0 focus:outline-none cursor-pointer ${
+                      loginMethod === "email"
+                        ? "bg-indigo-600 text-white shadow"
+                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    📧 Verify via Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginMethod("phone");
+                      setOtpError("");
+                    }}
+                    className={`flex-1 py-2 text-[11px] font-bold rounded-lg transition-all border-0 focus:outline-none cursor-pointer ${
+                      loginMethod === "phone"
+                        ? "bg-indigo-600 text-white shadow"
+                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    📱 Verify via Phone
+                  </button>
+                </div>
+
+                {loginMethod === "email" ? (
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-indigo-400 tracking-wider mb-2">Compulsory Email Address</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"><Mail className="w-4 h-4" /></span>
                       <input 
-                        type="tel"
+                        type="email"
                         required
-                        placeholder="Mobile Number"
-                        value={loginPhone}
-                        onChange={(e) => setLoginPhone(e.target.value.replace(/\D/g, ""))}
+                        placeholder="e.g. explorer@ubex.com"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
                         className="w-full bg-slate-950 border border-white/10 text-white rounded-xl pl-9 pr-4 py-3 text-xs font-semibold placeholder-white/20 focus:outline-none focus:border-indigo-500"
                       />
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-indigo-400 tracking-wider mb-2">Compulsory Mobile Number</label>
+                    <div className="flex gap-2">
+                      <select 
+                        value={loginCountryCode} 
+                        onChange={(e) => setLoginCountryCode(e.target.value)}
+                        className="bg-slate-950 border border-white/10 text-white rounded-xl px-2.5 py-3 text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="+91">🇮🇳 +91 (IN)</option>
+                        <option value="+1">🇺🇸 +1 (US)</option>
+                        <option value="+44">🇬🇧 +44 (UK)</option>
+                        <option value="+7">🇷🇺 +7 (RU)</option>
+                        <option value="+971">🇦🇪 +971 (AE)</option>
+                        <option value="+49">🇩🇪 +49 (DE)</option>
+                        <option value="+61">🇦🇺 +61 (AU)</option>
+                      </select>
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"><Phone className="w-4 h-4" /></span>
+                        <input 
+                          type="tel"
+                          required
+                          placeholder="Mobile Number"
+                          value={loginPhone}
+                          onChange={(e) => setLoginPhone(e.target.value.replace(/\D/g, ""))}
+                          className="w-full bg-slate-950 border border-white/10 text-white rounded-xl pl-9 pr-4 py-3 text-xs font-semibold placeholder-white/20 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {otpError && (
                   <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-200 text-xs rounded-xl flex items-start gap-2">
@@ -5187,7 +5278,10 @@ export default function App() {
 
                 <button 
                   onClick={handleSendOtp}
-                  disabled={isOtpSending || !loginPhone || loginPhone.trim().length < 8}
+                  disabled={
+                    isOtpSending || 
+                    (loginMethod === "phone" ? (!loginPhone || loginPhone.trim().length < 8) : (!loginEmail || !loginEmail.includes("@")))
+                  }
                   className="w-full py-3.5 bg-indigo-650 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer focus:outline-none border-0"
                 >
                   {isOtpSending ? (
@@ -5205,10 +5299,12 @@ export default function App() {
             {/* STEP 2: OTP Entry */}
             {loginStep === "otp" && (
               <div className="space-y-4">
-                <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/20 rounded-2xl flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold text-indigo-400 tracking-wider block uppercase">📲 SMS Gateway Simulator</span>
+                <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/20 rounded-2xl flex flex-col gap-1.5 font-sans">
+                  <span className="text-[10px] font-bold text-indigo-400 tracking-wider block uppercase">
+                    {loginMethod === "email" ? "📧 Email Gateway Simulator" : "📲 SMS Gateway Simulator"}
+                  </span>
                   <p className="text-xs text-indigo-200 leading-relaxed">
-                    SMS sent successfully! Please enter code <strong className="text-amber-300 font-extrabold text-base px-1">{generatedOtp}</strong> to verify instantly.
+                    {loginMethod === "email" ? "Verification code sent to your email inbox! Please enter code" : "SMS sent successfully! Please enter code"} <strong className="text-amber-300 font-extrabold text-base px-1">{generatedOtp}</strong> to verify instantly.
                   </p>
                 </div>
 
@@ -5253,16 +5349,90 @@ export default function App() {
 
             {/* STEP 3: Connect Account Profile */}
             {loginStep === "identity" && (
-              <div className="space-y-4">
-                <div className="p-3 bg-emerald-950/40 border border-emerald-500/25 text-emerald-200 text-xs rounded-xl flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Phone verified: <strong>{loginCountryCode} {loginPhone}</strong></span>
-                </div>
+              <div className="space-y-4 font-sans">
+                {loginMethod === "email" ? (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-950/40 border border-emerald-500/25 text-emerald-200 text-xs rounded-xl flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Email verified: <strong>{loginEmail}</strong></span>
+                    </div>
 
-                <div className="flex flex-col gap-2.5 pt-2">
+                    {/* Optional phone number input */}
+                    <div className="p-3.5 bg-slate-900/60 rounded-xl border border-white/5 space-y-2.5">
+                      <label className="block text-[11px] font-black uppercase text-slate-300 tracking-wider">
+                        Add Phone Number (Optional)
+                      </label>
+                      <div className="flex gap-2">
+                        <select 
+                          value={loginCountryCode} 
+                          onChange={(e) => setLoginCountryCode(e.target.value)}
+                          className="bg-slate-950 border border-white/10 text-white rounded-xl px-2 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="+91">🇮🇳 +91</option>
+                          <option value="+1">🇺🇸 +1</option>
+                          <option value="+44">🇬🇧 +44</option>
+                          <option value="+7">🇷🇺 +7</option>
+                          <option value="+971">🇦🇪 +971</option>
+                        </select>
+                        <div className="relative flex-1">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40"><Phone className="w-3.5 h-3.5" /></span>
+                          <input 
+                            type="tel"
+                            placeholder="Mobile (KYC/Updates)"
+                            value={loginPhone}
+                            onChange={(e) => setLoginPhone(e.target.value.replace(/\D/g, ""))}
+                            className="w-full bg-slate-950 border border-white/10 text-white rounded-xl pl-8 pr-3 py-2 text-xs font-semibold placeholder-white/20 focus:outline-none focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                        Highly recommended for receiving fast order updates and Ganga safety clearance alerts via WhatsApp.
+                      </p>
+                    </div>
+
+                    {/* Direct sign in button */}
+                    <button
+                      type="button"
+                      onClick={handleDirectLogin}
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition duration-200 focus:outline-none border-0 cursor-pointer shadow-lg"
+                    >
+                      🚀 Complete Registration & Sign In
+                    </button>
+                    
+                    <div className="relative flex py-2 items-center">
+                      <div className="flex-grow border-t border-white/5"></div>
+                      <span className="flex-shrink mx-3 text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">or link with</span>
+                      <div className="flex-grow border-t border-white/5"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-950/40 border border-emerald-500/25 text-emerald-200 text-xs rounded-xl flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Phone verified: <strong>{loginCountryCode} {loginPhone}</strong></span>
+                    </div>
+
+                    {/* Direct sign in button */}
+                    <button
+                      type="button"
+                      onClick={handleDirectLogin}
+                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition duration-200 focus:outline-none border-0 cursor-pointer shadow-lg"
+                    >
+                      🚀 Complete Login with Phone Number
+                    </button>
+                    
+                    <div className="relative flex py-2 items-center">
+                      <div className="flex-grow border-t border-white/5"></div>
+                      <span className="flex-shrink mx-3 text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">or link with</span>
+                      <div className="flex-grow border-t border-white/5"></div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2.5">
                   <button 
                     onClick={handleProviderLinkGmail}
-                    className="w-full py-3 px-4 bg-white hover:bg-indigo-50 text-slate-900 border border-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-3 shadow hover:scale-[1.01] transition-all duration-200 cursor-pointer focus:outline-none"
+                    className="w-full py-3 px-4 bg-white hover:bg-indigo-55 text-slate-900 border border-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-3 shadow hover:scale-[1.01] transition-all duration-200 cursor-pointer focus:outline-none"
                   >
                     <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                       <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.6l3.15-3.15C17.45 1.7 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.5l3.8 2.95C6.18 7.4 8.87 5.04 12 5.04z" />
