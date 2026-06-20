@@ -366,6 +366,32 @@ const RATES: Record<string, number> = {
   SGD: 0.016
 };
 
+const getRoomOccupancyAndPricingRules = (roomName: string) => {
+  const nameLower = (roomName || "").toLowerCase();
+  
+  if (nameLower.includes("dorm") || nameLower.includes("dormitory") || nameLower.includes("bunk")) {
+    return {
+      baseOccupancy: 1,
+      maxOccupancy: 1,
+      extraGuestFee: 500,
+    };
+  }
+  
+  if (nameLower.includes("supreme") || nameLower.includes("premium")) {
+    return {
+      baseOccupancy: 2,
+      maxOccupancy: 4,
+      extraGuestFee: 500,
+    };
+  }
+  
+  return {
+    baseOccupancy: 2,
+    maxOccupancy: 3,
+    extraGuestFee: 500,
+  };
+};
+
 export default function StaysPage({ 
   currency, 
   convertAndFormatPrice, 
@@ -851,13 +877,27 @@ export default function StaysPage({
       if (setExternalCheckInDate) setExternalCheckInDate(new Date(stay.firstAvailableWindow.start));
       if (setExternalCheckOutDate) setExternalCheckOutDate(new Date(stay.firstAvailableWindow.end));
     }
+    
+    let defaultRoomName = "";
+    let defaultRoomPrice = 0;
     if (stay.roomInventory && stay.roomInventory.length > 0) {
-      setSelectedRoomName(stay.roomInventory[0].name);
-      setSelectedRoomPrice(stay.roomInventory[0].priceValue);
+      defaultRoomName = stay.roomInventory[0].name;
+      defaultRoomPrice = stay.roomInventory[0].priceValue;
     } else {
-      setSelectedRoomName(stay.categories.includes("dorms") ? "AC Dormitory" : "Supreme Studio");
-      setSelectedRoomPrice(stay.priceValue);
+      defaultRoomName = stay.categories.includes("dorms") ? "AC Dormitory" : "Supreme Studio";
+      defaultRoomPrice = stay.priceValue;
     }
+    
+    setSelectedRoomName(defaultRoomName);
+    setSelectedRoomPrice(defaultRoomPrice);
+
+    // Enforce occupancy cap upon default room selection
+    const rules = getRoomOccupancyAndPricingRules(defaultRoomName);
+    if (guestsCount > rules.maxOccupancy) {
+      setGuestsCount(rules.maxOccupancy);
+      if (setExternalGuestsCount) setExternalGuestsCount(rules.maxOccupancy);
+    }
+
     setSelectedAddons([]);
     setBookingStatus(null);
   };
@@ -872,6 +912,14 @@ export default function StaysPage({
 
   const getCumulativePrice = () => {
     let total = selectedRoomPrice;
+    
+    // Calculate extra guest surcharge based on defined room occupancy rules
+    const rules = getRoomOccupancyAndPricingRules(selectedRoomName);
+    if (guestsCount > rules.baseOccupancy) {
+      const extraGuests = guestsCount - rules.baseOccupancy;
+      total += extraGuests * rules.extraGuestFee;
+    }
+
     selectedAddons.forEach(addonId => {
       const add = addonsList.find(a => a.id === addonId);
       if (add) total += add.priceValue;
@@ -1926,6 +1974,13 @@ export default function StaysPage({
                             onClick={() => { 
                               setSelectedRoomName(room.name); 
                               setSelectedRoomPrice(room.priceValue); 
+                              
+                              // Cap guestsCount to match the newly selected room's max occupancy
+                              const rules = getRoomOccupancyAndPricingRules(room.name);
+                              if (guestsCount > rules.maxOccupancy) {
+                                setGuestsCount(rules.maxOccupancy);
+                                if (setExternalGuestsCount) setExternalGuestsCount(rules.maxOccupancy);
+                              }
                             }}
                             className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                               isSelected 
@@ -2214,9 +2269,27 @@ export default function StaysPage({
                     </>
                     )}
                     <div className="col-span-2 space-y-1.5 text-left">
-                      <label className="text-[9px] font-black uppercase text-[#001166]/60 tracking-wider">Guests</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-black uppercase text-[#001166]/60 tracking-wider">Guests</label>
+                        {(() => {
+                          const rules = getRoomOccupancyAndPricingRules(selectedRoomName);
+                          if (guestsCount >= rules.maxOccupancy) {
+                            return (
+                              <span className="text-[9px] text-amber-600 font-black uppercase tracking-wider">
+                                ⚠️ Max Occupancy Reached
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                       <div className="flex items-center justify-between border border-[#001166]/8 rounded-2xl p-2 bg-[#001166]/4">
-                        <span className="text-[#001166] pl-2.5 font-bold text-xs">{guestsCount} Guest{guestsCount > 1 ? "s" : ""}</span>
+                        <span className="text-[#001166] pl-2.5 font-bold text-xs">
+                          {guestsCount} Guest{guestsCount > 1 ? "s" : ""}
+                          <span className="text-xs text-slate-400 font-normal ml-1">
+                            (Max {getRoomOccupancyAndPricingRules(selectedRoomName).maxOccupancy})
+                          </span>
+                        </span>
                         <div className="flex gap-1.5 pr-1">
                           <button 
                             type="button"
@@ -2225,18 +2298,25 @@ export default function StaysPage({
                               if (setExternalGuestsCount) setExternalGuestsCount(nextVal);
                               return nextVal;
                             })}
-                            className="w-7 h-7 bg-white hover:bg-indigo-50 border border-[#001166]/12 rounded-full flex items-center justify-center font-bold text-[#001166] transition-all cursor-pointer shadow-sm select-none"
+                            className="w-7 h-7 bg-white hover:bg-indigo-50 border border-[#001166]/12 rounded-full flex items-center justify-center font-bold text-[#001166] transition-all cursor-pointer shadow-sm select-none text-xs"
                           >
                             -
                           </button>
                           <button 
                             type="button"
                             onClick={() => setGuestsCount(prev => {
+                              const rules = getRoomOccupancyAndPricingRules(selectedRoomName);
+                              if (prev >= rules.maxOccupancy) return prev;
                               const nextVal = prev + 1;
                               if (setExternalGuestsCount) setExternalGuestsCount(nextVal);
                               return nextVal;
                             })}
-                            className="w-7 h-7 bg-indigo-950 text-white rounded-full flex items-center justify-center font-bold text-xs transition-all cursor-pointer shadow-sm select-none"
+                            disabled={guestsCount >= getRoomOccupancyAndPricingRules(selectedRoomName).maxOccupancy}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs transition-all cursor-pointer shadow-sm select-none ${
+                              guestsCount >= getRoomOccupancyAndPricingRules(selectedRoomName).maxOccupancy
+                              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                              : "bg-indigo-950 text-white hover:bg-slate-900"
+                            }`}
                           >
                             +
                           </button>
@@ -2253,6 +2333,22 @@ export default function StaysPage({
                       <span className="text-slate-500 font-medium">Room Choice ({selectedRoomName})</span>
                       <span className="font-bold text-slate-800">{convertAndFormatPrice(selectedRoomPrice)}</span>
                     </div>
+
+                    {/* Extra Guests charges display */}
+                    {(() => {
+                      const rules = getRoomOccupancyAndPricingRules(selectedRoomName);
+                      if (guestsCount > rules.baseOccupancy) {
+                        const extraGuests = guestsCount - rules.baseOccupancy;
+                        const totalExtraFee = extraGuests * rules.extraGuestFee;
+                        return (
+                          <div className="flex justify-between items-center text-xs text-amber-700">
+                            <span className="font-medium">Extra Guest ({extraGuests} × {convertAndFormatPrice(rules.extraGuestFee)}/nt)</span>
+                            <span className="font-bold">+{convertAndFormatPrice(totalExtraFee)}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     {/* All added addon checklist names */}
                     {selectedAddons.map(addonId => {
@@ -2346,24 +2442,34 @@ export default function StaysPage({
               
             </div>
 
-            {/* Simulated Handheld Sticky Footer Bar */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 flex items-center justify-between z-50 shadow-lg">
-              <div>
-                <span className="text-[10px] text-slate-400 block font-semibold uppercase">Est. total rate</span>
-                <span className="text-lg font-black text-slate-900">{convertAndFormatPrice(getCumulativePrice())}</span>
+            {/* Simulated Handheld Sticky Footer Bar - Single Source of Truth Total/Nightly Price and instant Book Now CTA */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-5 py-4 flex items-center justify-between z-50 shadow-2xl">
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] text-slate-400 block font-black uppercase tracking-wider">Est. Sum ({getNightsCount()} nights)</span>
+                <span className="text-xl font-black text-indigo-600 tracking-tight">
+                  {convertAndFormatPrice(getCumulativePrice() * getNightsCount())}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {convertAndFormatPrice(getCumulativePrice())} / nt
+                </span>
               </div>
-              <div className="flex gap-2">
+              <div>
                 <button 
-                  onClick={() => handleInquiryTrigger("phone")}
-                  className="px-4 py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow"
+                  onClick={() => {
+                    onBookStay(
+                      selectedStay, 
+                      selectedRoomName, 
+                      getCumulativePrice(), 
+                      selectedAddons, 
+                      checkInDate, 
+                      checkOutDate, 
+                      getNightsCount(), 
+                      guestsCount
+                    );
+                  }}
+                  className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all"
                 >
-                  <Phone className="w-3.5 h-3.5" /> Call
-                </button>
-                <button 
-                  onClick={() => handleInquiryTrigger("wa")}
-                  className="px-4 py-2.5 bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow"
-                >
-                  <MessageSquare className="w-3.5 h-3.5 fill-white" /> WA
+                  Book Now
                 </button>
               </div>
             </div>
