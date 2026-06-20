@@ -32,6 +32,20 @@ export default function PassportDashboard({
   const [error, setError] = useState<string | null>(null);
   const [selectedBadge, setSelectedBadge] = useState<any>(null);
 
+  useEffect(() => {
+    if (selectedBadge) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.style.overflow = "";
+      document.body.classList.remove("modal-open");
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.body.classList.remove("modal-open");
+    };
+  }, [selectedBadge]);
+
   // Admin Config Panel States
   const [adminData, setAdminData] = useState<any>(null);
   const [adminTab, setAdminTab] = useState<string>("badges"); // "badges" | "achievements" | "rewards" | "analytics" | "players"
@@ -1147,7 +1161,7 @@ export default function PassportDashboard({
       {selectedBadge && (
         <div 
           onClick={() => setSelectedBadge(null)}
-          className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[10005] animate-fade-in"
+          className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[2200] animate-fade-in"
         >
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}

@@ -43,7 +43,7 @@ body {
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 1720px;
-  z-index: 40;
+  z-index: 500;
   transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -465,7 +465,7 @@ body {
 .experience-drawer {
   position: fixed;
   inset: 0;
-  z-index: 99999;
+  z-index: 1000;
 }
 
 .drawer-overlay {

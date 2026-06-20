@@ -1706,6 +1706,63 @@ export default function App() {
     }
   }, [chatHistory, isChatOpen, isAiLoading]);
 
+  // Unified overlay manager: mutual exclusivity & body scroll-lock
+  useEffect(() => {
+    // 1. Mutual exclusivity rules:
+    // If mobile menu is opened, close the chat widget
+    if (isMobileMenuOpen) {
+      if (isChatOpen) setIsChatOpen(false);
+    }
+    // If chat widget is opened, close mobile menu
+    if (isChatOpen) {
+      if (isMobileMenuOpen) setIsMobileMenuOpen(false);
+    }
+
+    // Modal active detection
+    const isAnyModalOpen = 
+      showCheckoutModal || 
+      !!showConfirmationPanel || 
+      showBookingsPanel || 
+      showLoginModal || 
+      selectedExperience !== null || 
+      activeStayDetail !== null;
+
+    // If any modal/drawer is opened, close menu/chat overlays
+    if (isAnyModalOpen) {
+      if (isMobileMenuOpen) setIsMobileMenuOpen(false);
+      if (isChatOpen) setIsChatOpen(false);
+    }
+
+    // Opening Passport or Checkout views must close the navigation drawer
+    if (activeView === "passport" || activeView === "checkout") {
+      if (isMobileMenuOpen) setIsMobileMenuOpen(false);
+    }
+
+    // 2. Body scroll lock and background interactions
+    if (isAnyModalOpen || isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.style.overflow = "";
+      document.body.classList.remove("modal-open");
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      document.body.classList.remove("modal-open");
+    };
+  }, [
+    isMobileMenuOpen,
+    isChatOpen,
+    showCheckoutModal,
+    showConfirmationPanel,
+    showBookingsPanel,
+    showLoginModal,
+    selectedExperience,
+    activeStayDetail,
+    activeView
+  ]);
+
   // Translate labels helper
   const t = (key: string) => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS["EN"][key] || UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS["EN"]?.[key] || key;
@@ -2541,7 +2598,7 @@ export default function App() {
 
         {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-24 left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex flex-col gap-4 shadow-2xl z-50 max-h-[75vh] overflow-y-auto animate-fade-in text-white">
+          <div className="lg:hidden absolute top-24 left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex flex-col gap-4 shadow-2xl z-[1000] max-h-[75vh] overflow-y-auto animate-fade-in text-white">
             
             {/* Mobile Search input */}
             <form 
@@ -2701,19 +2758,29 @@ export default function App() {
                   <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "DE" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("DE"); localStorage.setItem("ubexLanguage", "DE"); }}>🇩🇪 DE</button>
                   <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "ES" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("ES"); localStorage.setItem("ubexLanguage", "ES"); }}>🇪🇸 ES</button>
                   <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "IT" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("IT"); localStorage.setItem("ubexLanguage", "IT"); }}>🇮🇹 IT</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "JA" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("JA"); localStorage.setItem("ubexLanguage", "JA"); }}>🇯🇵 JA</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "KO" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("KO"); localStorage.setItem("ubexLanguage", "KO"); }}>🇰🇷 KO</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "HE" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("HE"); localStorage.setItem("ubexLanguage", "HE"); }}>🇮🇱 HE</button>
                 </div>
               </div>
 
               {/* CURRENCY SELECTOR FOR MOBILE */}
               <div className="flex flex-col gap-1.5 text-left">
                 <label className="text-[10px] font-bold text-indigo-400 tracking-wider">CURRENCY</label>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5 max-h-[140px] overflow-y-auto pr-1">
                   <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "INR" ? "bg-amber-500 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("INR"); localStorage.setItem("ubexCurrency", "INR"); }}>₹ INR</button>
                   <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "USD" ? "bg-amber-500 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("USD"); localStorage.setItem("ubexCurrency", "USD"); }}>$ USD</button>
                   <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "EUR" ? "bg-amber-500 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("EUR"); localStorage.setItem("ubexCurrency", "EUR"); }}>€ EUR</button>
                   <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "GBP" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("GBP"); localStorage.setItem("ubexCurrency", "GBP"); }}>£ GBP</button>
                   <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "RUB" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("RUB"); localStorage.setItem("ubexCurrency", "RUB"); }}>₽ RUB</button>
                   <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "CNY" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("CNY"); localStorage.setItem("ubexCurrency", "CNY"); }}>¥ CNY</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "JPY" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("JPY"); localStorage.setItem("ubexCurrency", "JPY"); }}>¥ JPY</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "KRW" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("KRW"); localStorage.setItem("ubexCurrency", "KRW"); }}>₩ KRW</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "ILS" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("ILS"); localStorage.setItem("ubexCurrency", "ILS"); }}>₪ ILS</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "AED" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("AED"); localStorage.setItem("ubexCurrency", "AED"); }}>د.إ AED</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "AUD" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("AUD"); localStorage.setItem("ubexCurrency", "AUD"); }}>A$ AUD</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "CAD" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("CAD"); localStorage.setItem("ubexCurrency", "CAD"); }}>C$ CAD</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "SGD" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("SGD"); localStorage.setItem("ubexCurrency", "SGD"); }}>S$ SGD</button>
                 </div>
               </div>
             </div>
@@ -3003,7 +3070,7 @@ export default function App() {
 
                   {/* Guest Dropdown */}
                   {showGuestPicker && (
-                    <div className="absolute right-0 top-full mt-3 w-72 bg-white rounded-2xl border border-slate-100 shadow-2xl p-5 z-50 animate-fade-in text-slate-800" onClick={(e) => e.stopPropagation()}>
+                    <div className="absolute right-0 top-full mt-3 w-72 bg-white rounded-2xl border border-slate-100 shadow-2xl p-5 z-[1000] animate-fade-in text-slate-800" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-between items-center py-2 border-b border-slate-50 mb-3">
                         <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Travelers</span>
                         <span className="text-[10px] text-slate-400 font-semibold font-mono">Max 16 guests</span>
@@ -3685,7 +3752,7 @@ export default function App() {
 
           {/* UbEx Discovery Assistant - Mobile Date Selection Modal overlay */}
           {showAssistantDateModal && (
-            <div className="fixed inset-0 z-[9999999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <div className="fixed inset-0 z-[2200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
               <div 
                 className="absolute inset-0 bg-transparent" 
                 onClick={() => setShowAssistantDateModal(false)}
@@ -4582,7 +4649,7 @@ export default function App() {
          MOCK CHECKOUT CLIENT DETAILS MODAL
       ========================================== */}
       {showCheckoutModal && selectedExperience && selectedVariant && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[2200] animate-fade-in font-sans">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200/80 shadow-2xl relative animate-scale-up">
             
             <button 
@@ -4676,7 +4743,7 @@ export default function App() {
          CELEBRATION SUCCESS BOARDING PASS
       ========================================== */}
       {showConfirmationPanel && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[2200] animate-fade-in font-sans">
           <div className="bg-white rounded-3xl max-w-md w-full border-2 border-emerald-500 p-6 sm:p-8 relative shadow-2xl text-center overflow-hidden animate-scale-up">
             
             {/* confetti or stripes */}
@@ -4805,7 +4872,7 @@ export default function App() {
          "MY BOOKINGS" HISTORY PANEL
       ========================================== */}
       {showBookingsPanel && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-[2100] animate-fade-in font-sans">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 shadow-2xl relative max-h-[85vh] flex flex-col justify-between animate-scale-up">
             
             <button 
@@ -5018,7 +5085,7 @@ export default function App() {
          STAYS DYNAMIC DETAIL INSPECT POPUP MODAL
       ========================================== */}
       {activeStayDetail && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[2000] animate-fade-in font-sans">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 shadow-2xl relative overflow-hidden animate-scale-up">
             
             <button 
@@ -5296,7 +5363,7 @@ export default function App() {
 
         {/* Chat window panel */}
         {isChatOpen && (
-          <div className="fixed bottom-24 right-4 sm:right-8 w-[92vw] sm:w-[420px] h-[550px] bg-slate-900 border border-white/10 rounded-3xl shadow-2xl flex flex-col justify-between z-50 overflow-hidden animate-fade-in font-sans">
+          <div className="fixed bottom-24 right-4 sm:right-8 w-[92vw] sm:w-[420px] h-[550px] bg-slate-900 border border-white/10 rounded-3xl shadow-2xl flex flex-col justify-between z-[2000] overflow-hidden animate-fade-in font-sans">
             
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-indigo-950 to-slate-900 border-b border-white/5 flex items-center justify-between">
@@ -5396,7 +5463,7 @@ export default function App() {
          COMPULSORY PHONE OTP + MULTI-PROVIDER AUTH MODAL
       ========================================== */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[2200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className="relative w-full max-w-md bg-slate-900 border border-white/10 p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in font-sans text-white">
             
             {/* Background elements */}
