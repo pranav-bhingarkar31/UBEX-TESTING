@@ -526,6 +526,133 @@ app.get("/api/stays/public", async (req, res) => {
   }
 });
 
+// Complete Robust Flexible Search API Endpoint
+app.get("/api/stays/search-flexible", async (req, res) => {
+  try {
+    const mode = (req.query.mode as string) || "weekend";
+    if (mode !== "weekend" && mode !== "week" && mode !== "month") {
+      return res.status(400).json({ success: false, error: "Invalid flexible search mode. Must be weekend, week, or month" });
+    }
+
+    const staysDate = new Date();
+    // Helper to generate candidate search windows
+    const windows: { start: string; end: string; label: string; nights: number }[] = [];
+    const now = new Date(staysDate);
+    now.setHours(0, 0, 0, 0);
+
+    if (mode === "weekend") {
+      // Generate next 8 weekends
+      let current = new Date(now);
+      const day = current.getDay();
+      // Move to Friday: 5 is Friday
+      const daysToFriday = (5 - day + 7) % 7 === 0 ? 0 : (5 - day + 7) % 7;
+      current.setDate(current.getDate() + daysToFriday);
+
+      for (let i = 0; i < 8; i++) {
+        const fri = new Date(current);
+        const sun = new Date(current);
+        sun.setDate(sun.getDate() + 2); // Friday to Sunday is 2 nights
+
+        const startStr = fri.toISOString().split("T")[0];
+        const endStr = sun.toISOString().split("T")[0];
+        const label = `Weekend of ${fri.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${sun.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+        windows.push({ start: startStr, end: endStr, label, nights: 2 });
+        current.setDate(current.getDate() + 7);
+      }
+    } else if (mode === "week") {
+      // Generate next 12 weekly windows
+      let current = new Date(now);
+      const day = current.getDay();
+      const daysToFriday = (5 - day + 7) % 7;
+      current.setDate(current.getDate() + daysToFriday);
+
+      for (let i = 0; i < 12; i++) {
+        const wStart = new Date(current);
+        const wEnd = new Date(current);
+        wEnd.setDate(wEnd.getDate() + 7);
+
+        const startStr = wStart.toISOString().split("T")[0];
+        const endStr = wEnd.toISOString().split("T")[0];
+        const label = `${wStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${wEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+        windows.push({ start: startStr, end: endStr, label, nights: 7 });
+        current.setDate(current.getDate() + 7);
+      }
+    } else {
+      // mode === "month"
+      // Generate next 6 monthly windows
+      let current = new Date(now.getFullYear(), now.getMonth(), 1);
+      if (now.getDate() > 15) {
+        current.setMonth(current.getMonth() + 1);
+      }
+
+      for (let i = 0; i < 6; i++) {
+        const mStart = new Date(current);
+        const mEnd = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+        const diffNights = Math.round((mEnd.getTime() - mStart.getTime()) / (100 * 36 * 24 * 1000)) / 10;
+
+        const startStr = mStart.toISOString().split("T")[0];
+        const endStr = mEnd.toISOString().split("T")[0];
+        const label = `${mStart.toLocaleDateString("en-US", { month: "long" })} ${mStart.getFullYear()}`;
+        windows.push({ start: startStr, end: endStr, label, nights: diffNights });
+        current.setMonth(current.getMonth() + 1);
+      }
+    }
+
+    const allStays = await DbService.getStays(false); // exclude archived
+    const results = [];
+
+    for (const stay of allStays) {
+      const matchedWindows = [];
+      for (const win of windows) {
+        const av = await InventoryService.getStayAvailability(String(stay.id), win.start, win.end);
+        if (av.available) {
+          const basePrice = stay.dynamicPriceOverride || stay.priceValue || 699;
+          const totalPrice = basePrice * win.nights;
+          matchedWindows.push({
+            ...win,
+            basePrice,
+            totalPrice
+          });
+        }
+      }
+
+      if (matchedWindows.length > 0) {
+        // Compute pricing details
+        const cheapestWindow = [...matchedWindows].sort((a, b) => a.totalPrice - b.totalPrice)[0];
+        const firstAvailableWindow = matchedWindows[0];
+
+        // Rank factors: isPopular, rating, featuredScore, availability count
+        const popularityBonus = stay.isPopular ? 20 : 0;
+        const ratingScore = (stay.rating || 4.5) * 10;
+        const featuredBonus = stay.featuredScore || 50;
+        const availabilityScore = matchedWindows.length * 5;
+        const rankingScore = popularityBonus + ratingScore + featuredBonus + availabilityScore;
+
+        results.push({
+          ...stay,
+          availableWindows: matchedWindows,
+          cheapestWindow,
+          firstAvailableWindow,
+          rankingScore
+        });
+      }
+    }
+
+    // Sort results by rankingScore descending (Property ranking aware)
+    results.sort((a, b) => b.rankingScore - a.rankingScore);
+
+    return res.json({
+      success: true,
+      mode,
+      windows,
+      data: results
+    });
+  } catch (err: any) {
+    console.error("Flexible search failed:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Public CMS Endpoint - Experiences
 app.get("/api/experiences/public", async (req, res) => {
   try {

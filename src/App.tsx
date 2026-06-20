@@ -612,6 +612,42 @@ export default function App() {
   const [staysState, setStaysState] = useState<any[]>(STAYS);
   const [experiencesState, setExperiencesState] = useState<any[]>(EXPERIENCES);
 
+  const [flexibleSearchResults, setFlexibleSearchResults] = useState<any[] | null>(null);
+  const [flexibleSearchMode, setFlexibleSearchMode] = useState<"weekend" | "week" | "month" | null>(null);
+  const [flexibleSearchLoading, setFlexibleSearchLoading] = useState<boolean>(false);
+
+  const executeFlexibleSearch = async (mode: "weekend" | "week" | "month") => {
+    setFlexibleSearchLoading(true);
+    setFlexibleSearchMode(mode);
+    try {
+      const response = await fetch(`/api/stays/search-flexible?mode=${mode}`);
+      if (response.ok) {
+        const json = await response.json();
+        if (json.success) {
+          setFlexibleSearchResults(json.data);
+          
+          // Clear standard selected calendar dates to avoid confusion / blend nicely
+          setCheckInDate(null);
+          setCheckOutDate(null);
+          
+          // Redirect to stays view
+          setActiveView("stays");
+
+          // Close active modales/popovers if open
+          setShowCheckInPicker(false);
+          setShowCheckOutPicker(false);
+          setShowAssistantDateModal(false);
+        }
+      }
+    } catch (err) {
+      console.error("Flexible search failed:", err);
+    } finally {
+      setTimeout(() => {
+        setFlexibleSearchLoading(false);
+      }, 900);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     async function hydrateCatalog() {
@@ -1399,6 +1435,7 @@ export default function App() {
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [showCheckInPicker, setShowCheckInPicker] = useState<boolean>(false);
   const [showCheckOutPicker, setShowCheckOutPicker] = useState<boolean>(false);
+  const [showAssistantDateModal, setShowAssistantDateModal] = useState<boolean>(false);
   const [showGuestPicker, setShowGuestPicker] = useState<boolean>(false);
   const [activeBeltIndex, setActiveBeltIndex] = useState<number>(0);
 
@@ -2595,6 +2632,12 @@ export default function App() {
           lang={lang}
           externalSelectedVibes={homeSelectedVibes}
           setExternalSelectedVibes={setHomeSelectedVibes}
+          flexibleSearchMode={flexibleSearchMode}
+          flexibleSearchResults={flexibleSearchResults}
+          onClearFlexibleSearch={() => {
+            setFlexibleSearchMode(null);
+            setFlexibleSearchResults(null);
+          }}
         />
       ) : activeView === "community" ? (
         <CommunityPage 
@@ -2940,6 +2983,7 @@ export default function App() {
                       setShowCheckInPicker(false);
                       setShowCheckOutPicker(false);
                     }}
+                    onFlexibleSelect={executeFlexibleSearch}
                   />
                 </div>
               )}
@@ -3246,38 +3290,45 @@ export default function App() {
 
                 {/* Step 2: Date Choice Picker */}
                 {mobileBookingStep === 2 && (
-                  <div className="space-y-4 animate-fade-in text-slate-900">
+                  <div className="space-y-4 animate-fade-in text-slate-100">
                     <h3 className="text-base font-extrabold tracking-tight text-white font-display">Choose Travel Dates</h3>
                     
-                    <div className="grid grid-cols-2 gap-2 text-white">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <div 
-                        onClick={() => { setShowCheckInPicker(true); setShowCheckOutPicker(false); }}
-                        className={`p-3 bg-white/5 border rounded-xl cursor-pointer ${showCheckInPicker ? "border-indigo-400 bg-white/10" : "border-white/10"}`}
+                        onClick={() => { setShowAssistantDateModal(true); }}
+                        className="p-3.5 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-white/10 transition-colors flex flex-col gap-1 text-left"
                       >
-                        <span className="text-[8px] uppercase font-bold text-slate-400 block">Check In</span>
-                        <span className="text-xs font-bold">{checkInDate ? checkInDate.toLocaleDateString("en-GB") : "Select"}</span>
+                        <span className="text-[9px] uppercase font-bold tracking-wider text-indigo-300 block">Check In Date</span>
+                        <span className="text-xs font-extrabold text-white">
+                          📅 {checkInDate ? checkInDate.toLocaleDateString("en-GB") : "Select Date"}
+                        </span>
                       </div>
                       <div 
-                        onClick={() => { setShowCheckInPicker(false); setShowCheckOutPicker(true); }}
-                        className={`p-3 bg-white/5 border rounded-xl cursor-pointer ${showCheckOutPicker ? "border-indigo-400 bg-white/10" : "border-white/10"}`}
+                        onClick={() => { setShowAssistantDateModal(true); }}
+                        className="p-3.5 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-white/10 transition-colors flex flex-col gap-1 text-left"
                       >
-                        <span className="text-[8px] uppercase font-bold text-slate-400 block">Check Out</span>
-                        <span className="text-xs font-bold">{checkOutDate ? checkOutDate.toLocaleDateString("en-GB") : "Select"}</span>
+                        <span className="text-[9px] uppercase font-bold tracking-wider text-indigo-300 block">Check Out Date</span>
+                        <span className="text-xs font-extrabold text-white">
+                          📅 {checkOutDate ? checkOutDate.toLocaleDateString("en-GB") : "Select Date"}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="w-full bg-white rounded-2xl p-2 shadow-xl">
-                      <UbexDatePicker
-                        className="w-full"
-                        checkIn={checkInDate}
-                        checkOut={checkOutDate}
-                        initialFocusedField={showCheckOutPicker ? "checkOut" : "checkIn"}
-                        onChange={(inD, outD, isCompleted) => {
-                          setCheckInDate(inD);
-                          setCheckOutDate(outD);
-                        }}
-                        onClose={() => {}}
-                      />
+                    <button
+                      type="button"
+                      onClick={() => setShowAssistantDateModal(true)}
+                      className="w-full p-4 bg-indigo-600/30 hover:bg-indigo-600/40 border border-indigo-400/20 text-indigo-200 hover:text-white rounded-2xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer py-3"
+                    >
+                      <span>⏱️ Customize Date Range</span>
+                    </button>
+
+                    <div className="p-3.5 bg-indigo-900/30 border border-indigo-500/10 rounded-xl text-[11px] text-slate-300 font-sans leading-relaxed text-left">
+                      💡 <span className="font-semibold text-white">Dates Selected:</span> {checkInDate && checkOutDate ? (
+                        <>
+                          Staying from <span className="text-indigo-300 font-bold">{checkInDate.toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}</span> to{" "}
+                          <span className="text-indigo-300 font-bold">{checkOutDate.toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}</span> ({Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24))} nights).
+                        </>
+                      ) : "None selected yet."}
                     </div>
                   </div>
                 )}
@@ -3510,6 +3561,75 @@ export default function App() {
                 setShowGuestPicker(false);
               }}
             />
+          )}
+
+          {/* UbEx Discovery Assistant - Mobile Date Selection Modal overlay */}
+          {showAssistantDateModal && (
+            <div className="fixed inset-0 z-[9999999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <div 
+                className="absolute inset-0 bg-transparent" 
+                onClick={() => setShowAssistantDateModal(false)}
+              />
+              <div className="relative bg-white rounded-[28px] shadow-2xl w-full max-w-[350px] overflow-hidden border border-slate-100 flex flex-col z-10 text-slate-900 animate-fade-in">
+                
+                {/* Header */}
+                <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider">Travel Dates</span>
+                    <h4 className="text-sm font-extrabold text-slate-800">Select Booking Range</h4>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setShowAssistantDateModal(false)}
+                    className="p-1 px-2.5 rounded-full bg-slate-200/60 text-slate-500 font-extrabold text-xs hover:bg-slate-200 hover:text-slate-800 transition-all cursor-pointer"
+                  >
+                    × Close
+                  </button>
+                </div>
+
+                {/* Calendar Layer */}
+                <div className="p-4 bg-white flex justify-center overflow-y-auto">
+                  <UbexDatePicker
+                    className="w-full relative"
+                    checkIn={checkInDate}
+                    checkOut={checkOutDate}
+                    initialFocusedField="checkIn"
+                    onChange={(inD, outD) => {
+                      setCheckInDate(inD);
+                      setCheckOutDate(outD);
+                    }}
+                    onClose={() => setShowAssistantDateModal(false)}
+                    onFlexibleSelect={executeFlexibleSearch}
+                  />
+                </div>
+
+                {/* Info & CTA Footer */}
+                <div className="p-5 border-t border-slate-100 bg-slate-50 space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 font-medium select-none">Stay Nightly Base:</span>
+                    <span className="font-extrabold text-indigo-950">
+                      {checkInDate && checkOutDate && checkOutDate > checkInDate
+                        ? `${Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24))} Nights` 
+                        : "No range selected"}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!checkInDate || !checkOutDate || checkOutDate <= checkInDate}
+                    onClick={() => setShowAssistantDateModal(false)}
+                    className={`w-full py-3.5 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl shadow-xl transition-all cursor-pointer text-center ${
+                      checkInDate && checkOutDate && checkOutDate > checkInDate
+                        ? "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/10 hover:shadow-indigo-600/20 active:translate-y-px"
+                        : "bg-slate-300 text-slate-400 cursor-not-allowed"
+                    }`}
+                  >
+                    Confirm Dates
+                  </button>
+                </div>
+
+              </div>
+            </div>
           )}
 
           {/* ==========================================
@@ -5549,6 +5669,18 @@ export default function App() {
             </ProtectedAdminRoute>
           </AdminAuthProvider>
         </React.Suspense>
+      )}
+
+      {flexibleSearchLoading && (
+        <div className="fixed inset-0 bg-[#001166]/60 backdrop-blur-md z-[9999] flex flex-col items-center justify-center text-white">
+          <div className="bg-white/10 p-8 rounded-3xl border border-white/20 text-center shadow-2xl max-w-sm mx-4">
+            <div className="w-12 h-12 border-4 border-indigo-200 border-t-[#001166] rounded-full animate-spin mx-auto mb-4" />
+            <h3 className="text-base font-black tracking-tight mb-1">Curating Riverfront Outposts</h3>
+            <p className="text-indigo-200 text-[11px] font-semibold tracking-wide">
+              Searching available stays...
+            </p>
+          </div>
+        </div>
       )}
 
     </div>

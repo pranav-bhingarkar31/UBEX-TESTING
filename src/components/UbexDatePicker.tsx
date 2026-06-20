@@ -9,6 +9,7 @@ interface UbexDatePickerProps {
   className?: string;
   initialFocusedField?: "checkIn" | "checkOut";
   singleDateOnly?: boolean;
+  onFlexibleSelect?: (mode: "weekend" | "week" | "month") => void;
 }
 
 export const UbexDatePicker: React.FC<UbexDatePickerProps> = ({
@@ -19,6 +20,7 @@ export const UbexDatePicker: React.FC<UbexDatePickerProps> = ({
   className = "",
   initialFocusedField = "checkIn",
   singleDateOnly = false,
+  onFlexibleSelect,
 }) => {
   const [activeTab, setActiveTab] = useState<"dates" | "flexible">("dates");
   const [flexibility, setFlexibility] = useState<string>("exact");
@@ -203,11 +205,44 @@ export const UbexDatePicker: React.FC<UbexDatePickerProps> = ({
   }
 
   const flexibilityPills = [
-    { id: "exact", label: "Exact dates" },
-    { id: "1day", label: "± 1 day" },
-    { id: "3days", label: "± 3 days" },
-    { id: "7days", label: "± 7 days" },
+    { id: "exact", label: "Exact Dates" },
+    { id: "1day", label: "+1 Day" },
+    { id: "3day", label: "+3 Days" },
+    { id: "7day", label: "+7 Days" },
   ];
+
+  const getDurationPillId = (): string => {
+    if (!checkInDate || !checkOutDate) return "exact";
+    const t1 = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), checkInDate.getDate()).getTime();
+    const t2 = new Date(checkOutDate.getFullYear(), checkOutDate.getMonth(), checkOutDate.getDate()).getTime();
+    const diffDays = Math.round(Math.abs(t2 - t1) / (1000 * 3600 * 24));
+    
+    if (diffDays === 1) return "1day";
+    if (diffDays === 3) return "3day";
+    if (diffDays === 7) return "7day";
+    return "exact";
+  };
+
+  const activePillId = getDurationPillId();
+
+  const handlePillClick = (pid: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (pid === "exact") {
+      setFlexibility("exact");
+      return;
+    }
+    
+    setFlexibility(pid);
+    const start = checkInDate ? new Date(checkInDate.getTime()) : new Date(todayVal.getTime());
+    let days = 1;
+    if (pid === "3day") days = 3;
+    if (pid === "7day") days = 7;
+    
+    const end = new Date(start.getTime());
+    end.setDate(start.getDate() + days);
+    
+    onChange(start, end, false);
+  };
 
   return (
     <div
@@ -378,14 +413,11 @@ export const UbexDatePicker: React.FC<UbexDatePickerProps> = ({
                 <button
                   key={p.id}
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFlexibility(p.id);
-                  }}
-                  className={`px-3 py-1.5 rounded-full border text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    flexibility === p.id
-                      ? "bg-[#001166] text-white border-[#001166]"
-                      : "bg-white border-indigo-100/40 text-indigo-950/70 hover:bg-indigo-50/50 hover:border-indigo-100"
+                  onClick={(e) => handlePillClick(p.id, e)}
+                  className={`px-3.5 py-2 rounded-full border text-[9px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                    activePillId === p.id
+                      ? "bg-[#001166] text-white border-[#001166] shadow-sm scale-105"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
                   }`}
                 >
                   {p.label}
@@ -404,20 +436,25 @@ export const UbexDatePicker: React.FC<UbexDatePickerProps> = ({
                   onChange(null, null, false);
                   setFocusedField("checkIn");
                 }}
-                className="text-[10px] font-extrabold text-indigo-950/40 hover:text-red-500 transition-colors uppercase tracking-wider underline cursor-pointer"
+                className="text-[10px] font-extrabold text-[#001166]/50 hover:text-red-500 transition-colors uppercase tracking-wider underline cursor-pointer"
               >
                 Clear
               </button>
               <button
                 type="button"
+                disabled={!checkInDate || !checkOutDate || checkOutDate <= checkInDate}
                 onClick={(e) => {
                   e.stopPropagation();
                   onChange(checkInDate, checkOutDate, true);
                   if (onClose) onClose();
                 }}
-                className="px-4.5 py-2.5 bg-[#001166] text-white rounded-xl text-[10px] uppercase tracking-wider font-extrabold hover:bg-[#001166]/90 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                className={`px-5 py-2.5 rounded-xl text-[10px] uppercase tracking-wider font-extrabold transition-all cursor-pointer shadow-sm ${
+                  checkInDate && checkOutDate && checkOutDate > checkInDate
+                    ? "bg-[#001166] text-white hover:bg-[#001166]/90 hover:scale-[1.02]"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                }`}
               >
-                Apply Dates
+                Confirm Dates
               </button>
             </div>
           ) : (
@@ -449,11 +486,22 @@ export const UbexDatePicker: React.FC<UbexDatePickerProps> = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const now = new Date();
-                  const inDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3);
-                  const outDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 10);
-                  onChange(inDate, outDate, true);
-                  if (onClose) onClose();
+                  let modeQuery: "weekend" | "week" | "month" = "weekend";
+                  if (fOp === "Any week") {
+                    modeQuery = "week";
+                  } else if (fOp === "Any month") {
+                    modeQuery = "month";
+                  }
+
+                  if (onFlexibleSelect) {
+                    onFlexibleSelect(modeQuery);
+                  } else {
+                    const now = new Date();
+                    const inDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3);
+                    const outDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 10);
+                    onChange(inDate, outDate, true);
+                    if (onClose) onClose();
+                  }
                 }}
                 className="px-3 py-2 bg-white border border-indigo-100/50 text-[#001166] text-[10px] font-bold rounded-xl hover:bg-indigo-50/50 hover:border-[#001166] transition-colors w-full cursor-pointer"
               >

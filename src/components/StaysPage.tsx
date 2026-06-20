@@ -315,6 +315,10 @@ interface StaysPageProps {
   lang?: string;
   externalSelectedVibes?: string[];
   setExternalSelectedVibes?: (val: string[] | ((prev: string[]) => string[])) => void;
+
+  flexibleSearchMode?: "weekend" | "week" | "month" | null;
+  flexibleSearchResults?: any[] | null;
+  onClearFlexibleSearch?: () => void;
 }
 
 const FILTER_LOCATIONS = ["Tapovan", "Laxman Jhula", "Ram Jhula", "Riverside Area", "Upper Rishikesh"];
@@ -378,7 +382,10 @@ export default function StaysPage({
   setSearchQuery: propSetSearchQuery,
   lang,
   externalSelectedVibes,
-  setExternalSelectedVibes
+  setExternalSelectedVibes,
+  flexibleSearchMode,
+  flexibleSearchResults,
+  onClearFlexibleSearch
 }: StaysPageProps) {
   
   const t = (phrase: string): string => {
@@ -622,7 +629,8 @@ export default function StaysPage({
   };
 
   // Real-time overriden lists
-  const staysList = ALL_STAYS.map(stay => {
+  const staysSource = flexibleSearchResults && flexibleSearchResults.length > 0 ? flexibleSearchResults : ALL_STAYS;
+  const staysList = staysSource.map(stay => {
     const overridenVal = getOverridenPrice(stay.id, stay.title, stay.priceValue);
     return {
       ...stay,
@@ -744,6 +752,11 @@ export default function StaysPage({
       return scoreB - scoreA;
     }
     // Recommended
+    if (flexibleSearchMode) {
+      if (a.rankingScore !== undefined && b.rankingScore !== undefined) {
+        return b.rankingScore - a.rankingScore;
+      }
+    }
     return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
   });
 
@@ -831,9 +844,13 @@ export default function StaysPage({
     }
   };
 
-  const handleOpenDrawer = (stay: StayItem) => {
+  const handleOpenDrawer = (stay: StayItem | any) => {
     setSelectedStay(stay);
     setActiveStayTab("gallery-sec");
+    if (stay.firstAvailableWindow) {
+      if (setExternalCheckInDate) setExternalCheckInDate(new Date(stay.firstAvailableWindow.start));
+      if (setExternalCheckOutDate) setExternalCheckOutDate(new Date(stay.firstAvailableWindow.end));
+    }
     if (stay.roomInventory && stay.roomInventory.length > 0) {
       setSelectedRoomName(stay.roomInventory[0].name);
       setSelectedRoomPrice(stay.roomInventory[0].priceValue);
@@ -987,6 +1004,30 @@ export default function StaysPage({
            MAIN CO-ORDINATED FILTER LAYOUT
       ════════════════════════════════════════ */}
       <section className="py-12 max-w-7xl mx-auto px-4 sm:px-8">
+        
+        {flexibleSearchMode && (
+          <div className="mb-8 p-4.5 bg-indigo-50/50 border border-indigo-150 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-xs">
+            <div className="flex items-start sm:items-center gap-3">
+              <span className="w-8 h-8 rounded-xl bg-indigo-600/10 flex items-center justify-center text-base shrink-0 select-none">
+                ✨
+              </span>
+              <div>
+                <h4 className="text-xs font-black text-[#001166] uppercase tracking-widest leading-none">
+                  Spontaneous Flexible Voyage Active
+                </h4>
+                <p className="text-[11px] text-[#001166] mt-1.5 font-bold">
+                  Showing available properties for <span className="underline decoration-2 decoration-amber-400 font-extrabold capitalize">Any {flexibleSearchMode}</span>, ordered by dynamic availability & prestige score.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClearFlexibleSearch}
+              className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-650 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all self-end sm:self-auto cursor-pointer border-0"
+            >
+              Reset Flexible Search ×
+            </button>
+          </div>
+        )}
         
         {/* Filter Navigation Bar & Mobile Toggles */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200">
@@ -1450,6 +1491,18 @@ export default function StaysPage({
                             ))}
                           </div>
                         </div>
+
+                        {stay.firstAvailableWindow && (
+                          <div className="mt-4 p-3.5 bg-amber-50/50 border border-amber-200/40 rounded-2xl text-left shadow-xs">
+                            <span className="text-[9px] font-black text-amber-900 uppercase tracking-widest block leading-none">📅 Curated Spontaneous Date</span>
+                            <span className="text-xs font-black text-[#001166] mt-1.5 block">
+                              {stay.firstAvailableWindow.label}
+                            </span>
+                            <span className="text-[10px] text-indigo-950/70 block font-bold mt-1">
+                              Total Est: <span className="font-mono text-indigo-700 font-extrabold">{convertAndFormatPrice(stay.firstAvailableWindow.totalPrice)}</span> ({stay.firstAvailableWindow.nights} nights)
+                            </span>
+                          </div>
+                        )}
 
                         <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
                           <div className="flex items-center gap-1 text-[10px] font-semibold text-indigo-650">
