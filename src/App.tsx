@@ -823,7 +823,7 @@ export default function App() {
     setShowLoginModal(true);
   };
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (loginMethod === "phone") {
       if (!loginPhone || loginPhone.trim().length < 8) {
         setOtpError("Please enter a valid compulsory mobile number");
@@ -838,101 +838,176 @@ export default function App() {
     setIsOtpSending(true);
     setOtpError("");
     
-    // Generate a secure 6-digit numeric OTP code
-    setTimeout(() => {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(code);
-      setIsOtpSending(false);
-      setLoginStep("otp");
-      if (loginMethod === "phone") {
-        console.log(`[UbEx SECURE SMS LOCK] OTP code for ${loginCountryCode} ${loginPhone}: [ ${code} ]`);
+    try {
+      const response = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: loginEmail,
+          phone: `${loginCountryCode} ${loginPhone}`,
+          method: loginMethod
+        })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setLoginStep("otp");
       } else {
-        console.log(`[UbEx SECURE EMAIL LOCK] OTP code for ${loginEmail}: [ ${code} ]`);
+        setOtpError(data.error || "Failed to send verification code. Please check configuration.");
       }
-    }, 800);
+    } catch (err: any) {
+      console.error("Failed to send OTP:", err);
+      setOtpError("Network error. Failed to execute OTP dispatch.");
+    } finally {
+      setIsOtpSending(false);
+    }
   };
 
-  const handleVerifyOtp = () => {
-    if (loginOtp === generatedOtp || loginOtp === "123456" || loginOtp === "000000") {
-      setOtpError("");
-      setLoginStep("identity");
-    } else {
-      setOtpError("Incorrect verification OTP code. Please trace code from notification console below.");
+  const handleVerifyOtp = async () => {
+    if (!loginOtp) {
+      setOtpError("Please enter the verification code");
+      return;
+    }
+    setOtpError("");
+    try {
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: loginEmail,
+          phone: `${loginCountryCode} ${loginPhone}`,
+          method: loginMethod,
+          otp: loginOtp
+        })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const identifier = loginMethod === "email" ? loginEmail.trim().toLowerCase() : `${loginCountryCode} ${loginPhone}`.trim();
+        const savedProfileSession = localStorage.getItem(`ubex_user_profile_${identifier}`);
+        if (savedProfileSession) {
+          try {
+            const parsedProfile = JSON.parse(savedProfileSession);
+            if (parsedProfile && parsedProfile.profileCompleted) {
+              setCurrentUser(parsedProfile);
+              setUserToken(parsedProfile.token || `mock-token-${Date.now()}`);
+              setShowLoginModal(false);
+              return;
+            }
+          } catch (e) {
+            console.warn("Stale profile session, forcing profile setup flow:", e);
+          }
+        }
+        setLoginStep("identity");
+      } else {
+        setOtpError(data.error || "Incorrect verification OTP code.");
+      }
+    } catch (err: any) {
+      console.error("Failed to verify OTP:", err);
+      setOtpError("Network error. Verification service unavailable.");
     }
   };
 
   const handleProviderLinkGmail = async () => {
+    let finalProfile: any = null;
+    const mockToken = `mock-google-token-${Date.now()}`;
     try {
       const result = await signInWithPopup(auth, googleAuthProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         setGoogleCalendarToken(credential.accessToken);
       }
-      // Enrich retrieved profile details
-      setCurrentUser((prev: any) => ({
-        ...prev,
+      finalProfile = {
+        uid: result.user.uid || "mock-google-user-123",
         displayName: result.user.displayName || "Rishikesh Explorer",
         email: result.user.email || loginEmail || "explore@ubex.com",
         photoURL: result.user.photoURL,
         phoneNumber: loginPhone ? `${loginCountryCode} ${loginPhone}` : (result.user.phoneNumber || undefined),
-        phoneVerified: !!loginPhone
-      }));
+        phoneVerified: !!loginPhone,
+        profileCompleted: true,
+        token: credential?.accessToken || mockToken
+      };
+      
+      const identifier = loginMethod === "email" ? finalProfile.email.trim().toLowerCase() : `${loginCountryCode} ${loginPhone}`.trim();
+      localStorage.setItem(`ubex_user_profile_${identifier}`, JSON.stringify(finalProfile));
+      
+      setCurrentUser(finalProfile);
+      setUserToken(finalProfile.token);
       setShowLoginModal(false);
     } catch (error) {
       console.warn("Secure Google Popup failed, continuing with full fallback profile:", error);
-      const mockUser = {
+      finalProfile = {
         uid: "mock-google-user-123",
         displayName: "Raffy Explorer",
         email: loginEmail || "explore@ubex.com",
         photoURL: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150",
         phoneNumber: loginPhone ? `${loginCountryCode} ${loginPhone}` : undefined,
-        phoneVerified: !!loginPhone
+        phoneVerified: !!loginPhone,
+        profileCompleted: true,
+        token: mockToken
       };
-      setCurrentUser(mockUser);
-      setUserToken("mock-token-abc");
+      
+      const identifier = loginMethod === "email" ? finalProfile.email.trim().toLowerCase() : `${loginCountryCode} ${loginPhone}`.trim();
+      localStorage.setItem(`ubex_user_profile_${identifier}`, JSON.stringify(finalProfile));
+      
+      setCurrentUser(finalProfile);
+      setUserToken(mockToken);
       setShowLoginModal(false);
     }
   };
 
   const handleProviderLinkMeta = () => {
-    // Complete beautiful Meta ID connection and close session modal
+    const mockToken = `mock-meta-token-${Date.now()}`;
     const metaUser = {
       uid: "mock-meta-user-888",
       displayName: "Zuck Alpinist",
       email: loginEmail || "meta.adventures@ubex.com",
       photoURL: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150",
       phoneNumber: loginPhone ? `${loginCountryCode} ${loginPhone}` : undefined,
-      phoneVerified: !!loginPhone
+      phoneVerified: !!loginPhone,
+      profileCompleted: true,
+      token: mockToken
     };
+    
+    const identifier = loginMethod === "email" ? metaUser.email.trim().toLowerCase() : `${loginCountryCode} ${loginPhone}`.trim();
+    localStorage.setItem(`ubex_user_profile_${identifier}`, JSON.stringify(metaUser));
+    
     setCurrentUser(metaUser);
-    setUserToken("mock-meta-token");
+    setUserToken(mockToken);
     setShowLoginModal(false);
   };
 
   const handleDirectLogin = () => {
+    let finalProfile: any = null;
+    const mockToken = `mock-email-token-${Date.now()}`;
+    
     if (loginMethod === "email") {
       const namePart = loginEmail.split("@")[0] || "Traveler";
       const beautifiedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-      const emailUser = {
+      finalProfile = {
         uid: `ubex-email-user-${Math.floor(100000 + Math.random() * 900000)}`,
         displayName: beautifiedName,
         email: loginEmail,
         phoneNumber: loginPhone ? `${loginCountryCode} ${loginPhone}` : undefined,
-        phoneVerified: !!loginPhone
+        phoneVerified: !!loginPhone,
+        profileCompleted: true,
+        token: mockToken
       };
-      setCurrentUser(emailUser);
-      setUserToken(`mock-email-token-${Date.now()}`);
     } else {
-      const phoneUser = {
+      finalProfile = {
         uid: `ubex-phone-user-${Math.floor(100000 + Math.random() * 900000)}`,
         displayName: `Explorer ${loginPhone.slice(-4)}`,
         email: loginEmail || "explore@ubex.com",
         phoneNumber: `${loginCountryCode} ${loginPhone}`,
-        phoneVerified: true
+        phoneVerified: true,
+        profileCompleted: true,
+        token: mockToken
       };
-      setCurrentUser(phoneUser);
-      setUserToken(`mock-phone-token-${Date.now()}`);
     }
+    
+    const identifier = loginMethod === "email" ? loginEmail.trim().toLowerCase() : `${loginCountryCode} ${loginPhone}`.trim();
+    localStorage.setItem(`ubex_user_profile_${identifier}`, JSON.stringify(finalProfile));
+    
+    setCurrentUser(finalProfile);
+    setUserToken(mockToken);
     setShowLoginModal(false);
   };
 
@@ -1094,36 +1169,45 @@ export default function App() {
     );
   }, [dynamicStays, searchQuery]);
   
-  // Checkout Cart States (initialized with gorgeous demo stay listings matching the HTML template format)
-  const [cartStays, setCartStays] = useState<any[]>([
-    {
-      id: "stay-riverside-demo",
-      title: "Riverside Community Stay",
-      roomName: "Private Room",
-      roomPrice: 1500,
-      img: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=400",
-      loc: "Tapovan, Rishikesh",
-      guestsCount: 2,
-      checkIn: "2026-06-18",
-      checkOut: "2026-06-21",
-      nights: 3
-    },
-    {
-      id: "stay-mountain-demo",
-      title: "Mountain View Dorm",
-      roomName: "Dorm Bed",
-      roomPrice: 800,
-      img: "https://images.unsplash.com/photo-1555854877-abab0e564b86?q=80&w=400",
-      loc: "Upper Tapovan, Rishikesh",
-      guestsCount: 4,
-      checkIn: "2026-06-18",
-      checkOut: "2026-06-21",
-      nights: 3
-    }
-  ]);
-
+  // Checkout Cart States (initialized empty per production specifications, synchronized per-user)
+  const [cartStays, setCartStays] = useState<any[]>([]);
   const [cartExperiences, setCartExperiences] = useState<any[]>([]);
-  const [isCartDemo, setIsCartDemo] = useState(true);
+  const [isCartDemo, setIsCartDemo] = useState(false);
+
+  // Load user-specific cart on user state shift
+  useEffect(() => {
+    const keyPrefix = currentUser ? `ubex_cart_${currentUser.uid || currentUser.email}` : "ubex_cart_guest";
+    try {
+      const savedStays = localStorage.getItem(`${keyPrefix}_stays`);
+      const savedExps = localStorage.getItem(`${keyPrefix}_experiences`);
+      setCartStays(savedStays ? JSON.parse(savedStays) : []);
+      setCartExperiences(savedExps ? JSON.parse(savedExps) : []);
+    } catch (e) {
+      console.warn("Failed to restore user-specific cart:", e);
+      setCartStays([]);
+      setCartExperiences([]);
+    }
+  }, [currentUser]);
+
+  // Synchronize stays changes to user-specific localStorage
+  useEffect(() => {
+    const keyPrefix = currentUser ? `ubex_cart_${currentUser.uid || currentUser.email}` : "ubex_cart_guest";
+    try {
+      localStorage.setItem(`${keyPrefix}_stays`, JSON.stringify(cartStays || []));
+    } catch (e) {
+      console.warn("Failed to synchronize stays storage:", e);
+    }
+  }, [cartStays, currentUser]);
+
+  // Synchronize experiences changes to user-specific localStorage
+  useEffect(() => {
+    const keyPrefix = currentUser ? `ubex_cart_${currentUser.uid || currentUser.email}` : "ubex_cart_guest";
+    try {
+      localStorage.setItem(`${keyPrefix}_experiences`, JSON.stringify(cartExperiences || []));
+    } catch (e) {
+      console.warn("Failed to synchronize experiences storage:", e);
+    }
+  }, [cartExperiences, currentUser]);
 
   // Add selected stay to checkout cart
   const handleBookStay = (
@@ -2686,6 +2770,7 @@ export default function App() {
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
           lang={lang}
+          currentUser={currentUser}
         />
       ) : activeView === "passport" ? (
         <PassportDashboard 
@@ -5421,10 +5506,10 @@ export default function App() {
               <div className="space-y-4">
                 <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/20 rounded-2xl flex flex-col gap-1.5 font-sans">
                   <span className="text-[10px] font-bold text-indigo-400 tracking-wider block uppercase">
-                    {loginMethod === "email" ? "📧 Email Gateway Simulator" : "📲 SMS Gateway Simulator"}
+                    {loginMethod === "email" ? "📧 Email Authorization" : "📲 SMS Authorization"}
                   </span>
                   <p className="text-xs text-indigo-200 leading-relaxed">
-                    {loginMethod === "email" ? "Verification code sent to your email inbox! Please enter code" : "SMS sent successfully! Please enter code"} <strong className="text-amber-300 font-extrabold text-base px-1">{generatedOtp}</strong> to verify instantly.
+                    {loginMethod === "email" ? "Verification code sent to your email inbox! Please enter your 6-digit code." : "Verification SMS sent successfully! Please enter your 6-digit code."}
                   </p>
                 </div>
 

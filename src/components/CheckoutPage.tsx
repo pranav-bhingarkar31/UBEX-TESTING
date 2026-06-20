@@ -63,6 +63,7 @@ interface CheckoutPageProps {
   currencySymbol: string;
   switchToTab: (tab: "stays" | "experiences" | "community") => void;
   lang?: string;
+  currentUser?: any;
 }
 
 const EXPERIENCE_ADDONS = [
@@ -106,12 +107,22 @@ export default function CheckoutPage({
   onCompleteBooking,
   currencySymbol,
   switchToTab,
-  lang
+  lang,
+  currentUser
 }: CheckoutPageProps) {
   // Guest Details state
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  
+  // Auto-fill profile details from active user session
+  useEffect(() => {
+    if (currentUser) {
+      setFullName((prev) => prev || currentUser.displayName || "");
+      setEmail((prev) => prev || currentUser.email || "");
+      setPhone((prev) => prev || currentUser.phoneNumber || "");
+    }
+  }, [currentUser]);
   const [country, setCountry] = useState("India");
   const [arrivalTime, setArrivalTime] = useState("");
   const [travelPurpose, setTravelPurpose] = useState("");
