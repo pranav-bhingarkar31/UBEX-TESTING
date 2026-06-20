@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { 
   Trophy, Award, Compass, Star, Camera, Video, Shield, User,
   ListFilter, Sparkles, BookOpen, Gift, RotateCcw, Plus, Edit2, Trash2, 
-  ChevronRight, BarChart3, Users, Settings, Database, CheckCircle, Lock, Gem
+  ChevronRight, BarChart3, Users, Settings, Database, CheckCircle, Lock, Gem,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -89,6 +90,25 @@ export default function PassportDashboard({
     loadPassport();
     loadAdminData();
   }, [currentUser, authHeader]);
+
+  // Escape key event listener to close overlay dialogs (Issue 3)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedBadge(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Sandbox simulation tool flag (Issue 4)
+  const showSandbox = window.location.hash === "#admin" || 
+                      window.location.search.includes("admin=true") || 
+                      window.location.search.includes("sandbox=true") ||
+                      localStorage.getItem("isAdmin") === "true";
 
   // Simulate travel tasks
   const handleSimulateAction = async (action: string, payload: any) => {
@@ -310,68 +330,70 @@ export default function PassportDashboard({
               exit={{ opacity: 0, y: -15 }}
               className="space-y-8"
             >
-              {/* SANDBOX TESTING BOX */}
-              <div className="p-4 bg-amber-500/10 border border-amber-400/20 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                  <div className="font-extrabold text-[#0F1B3C] text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Database className="w-4 h-4 text-amber-500" />
-                    Interactive Simulation Sandbox (Demo Sandbox Option)
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-1 font-light">
-                    Test how badges and achievements unlock in real-time. Since auth is set to Guest by default, simulate any activity or stay booking to trigger instant celebrations.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1 md:self-center shrink-0">
-                  <button 
-                    onClick={() => handleSimulateAction("manual_badge", { badgeId: "rafting_master" })}
-                    className="px-2.5 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
-                  >
-                    🚣 Raft
-                  </button>
-                  <button 
-                    onClick={() => handleSimulateAction("manual_badge", { badgeId: "bungee_brave" })}
-                    className="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
-                  >
-                    🪂 Bungee
-                  </button>
-                  <button 
-                    onClick={() => handleSimulateAction("manual_badge", { badgeId: "camp_explorer" })}
-                    className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
-                  >
-                    🏕 Camp
-                  </button>
-                  <button 
-                    onClick={() => handleSimulateAction("manual_badge", { badgeId: "climbing_pro" })}
-                    className="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-850 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
-                  >
-                    🧗 Climb
-                  </button>
-                  <button 
-                    onClick={() => handleSimulateAction("manual_badge", { badgeId: "kayak_king" })}
-                    className="px-2.5 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
-                  >
-                    🚣 Kayak
-                  </button>
-                  <button 
-                    onClick={() => handleSimulateAction("social_action", { type: "photo" })}
-                    className="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
-                  >
-                    📸 Photos
-                  </button>
-                  <button 
-                    onClick={() => handleSimulateAction("social_action", { type: "reel" })}
-                    className="px-2.5 py-1.5 bg-fuchsia-100 hover:bg-fuchsia-200 text-fuchsia-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
-                  >
-                    🎥 Reels
-                  </button>
-                  <button 
-                    onClick={() => handleSimulateAction("reset_passport", {})}
-                    className="px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3 h-3" /> Reset
-                  </button>
-                </div>
-              </div>
+               {/* SANDBOX TESTING BOX */}
+               {showSandbox && (
+                 <div className="p-4 bg-amber-500/10 border border-amber-400/20 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                   <div>
+                     <div className="font-extrabold text-[#0F1B3C] text-xs uppercase tracking-wider flex items-center gap-1.5">
+                       <Database className="w-4 h-4 text-amber-500" />
+                       Interactive Simulation Sandbox (Demo Sandbox Option)
+                     </div>
+                     <p className="text-[11px] text-slate-600 mt-1 font-light">
+                       Test how badges and achievements unlock in real-time. Since auth is set to Guest by default, simulate any activity or stay booking to trigger instant celebrations.
+                     </p>
+                   </div>
+                   <div className="flex flex-wrap gap-1 md:self-center shrink-0">
+                     <button 
+                       onClick={() => handleSimulateAction("manual_badge", { badgeId: "rafting_master" })}
+                       className="px-2.5 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
+                     >
+                       🚣 Raft
+                     </button>
+                     <button 
+                       onClick={() => handleSimulateAction("manual_badge", { badgeId: "bungee_brave" })}
+                       className="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
+                     >
+                       🪂 Bungee
+                     </button>
+                     <button 
+                       onClick={() => handleSimulateAction("manual_badge", { badgeId: "camp_explorer" })}
+                       className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
+                     >
+                       🏕 Camp
+                     </button>
+                     <button 
+                       onClick={() => handleSimulateAction("manual_badge", { badgeId: "climbing_pro" })}
+                       className="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-850 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
+                     >
+                       🧗 Climb
+                     </button>
+                     <button 
+                       onClick={() => handleSimulateAction("manual_badge", { badgeId: "kayak_king" })}
+                       className="px-2.5 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
+                     >
+                       🚣 Kayak
+                     </button>
+                     <button 
+                       onClick={() => handleSimulateAction("social_action", { type: "photo" })}
+                       className="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
+                     >
+                       📸 Photos
+                     </button>
+                     <button 
+                       onClick={() => handleSimulateAction("social_action", { type: "reel" })}
+                       className="px-2.5 py-1.5 bg-fuchsia-100 hover:bg-fuchsia-200 text-fuchsia-800 font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer"
+                     >
+                       🎥 Reels
+                     </button>
+                     <button 
+                       onClick={() => handleSimulateAction("reset_passport", {})}
+                       className="px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[10px] rounded-lg tracking-wider border-0 cursor-pointer flex items-center gap-1"
+                     >
+                       <RotateCcw className="w-3 h-3" /> Reset
+                     </button>
+                   </div>
+                 </div>
+               )}
 
               {/* CORE METRICS GRID */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1123,17 +1145,22 @@ export default function PassportDashboard({
 
       {/* DETAIL DRAWER / POPUP FOR BADGES */}
       {selectedBadge && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div 
+          onClick={() => setSelectedBadge(null)}
+          className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[10005] animate-fade-in"
+        >
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
+            onClick={(e) => e.stopPropagation()}
             className={`w-full max-w-sm rounded-3xl p-6 border text-center space-y-6 relative ${getBadgeColorClass(selectedBadge.color)} bg-white`}
           >
             <button 
               onClick={() => setSelectedBadge(null)}
-              className="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 border-none p-1.5 rounded-full text-slate-600 cursor-pointer"
+              className="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 border-none p-1.5 rounded-full text-slate-600 cursor-pointer flex items-center justify-center"
+              title="Close modal"
             >
-              <RotateCcw className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
 
             <div className="w-24 h-24 rounded-3xl bg-white shadow-xl border flex items-center justify-center text-6xl mx-auto animate-bounce">
@@ -1143,7 +1170,7 @@ export default function PassportDashboard({
             <div className="space-y-2">
               <span className="text-[10px] uppercase font-mono tracking-widest text-[#0F1B3C]/50 block">UbEx Adventure Badge</span>
               <h3 className="text-lg font-black text-[#0F1B3C] tracking-tight">{selectedBadge.name}</h3>
-              <p className="text-xs text-slate-650 font-light leading-relaxed whitespace-pre-line">{selectedBadge.description}</p>
+              <p className="text-xs text-slate-655 font-light leading-relaxed whitespace-pre-line">{selectedBadge.description}</p>
             </div>
 
             <div className="p-4 bg-white/50 border border-black/5 rounded-2xl flex items-center justify-between text-xs">

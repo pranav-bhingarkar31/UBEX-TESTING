@@ -2011,7 +2011,17 @@ export default function StaysPage({
                               </div>
                             </div>
                             <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">{room.occupancy}</span>
+                              <div className="flex flex-col text-left">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">{room.occupancy}</span>
+                                {(() => {
+                                  const rules = getRoomOccupancyAndPricingRules(room.name);
+                                  return (
+                                    <span className="text-[9px] text-indigo-500 font-semibold mt-0.5">
+                                      Max {rules.maxOccupancy} Pax • Base {rules.baseOccupancy}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                               <span className="text-xs font-black text-indigo-650">
                                 {convertAndFormatPrice(room.priceValue)} <span className="text-[9px] font-normal text-slate-400">/ night</span>
                               </span>

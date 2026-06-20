@@ -43,8 +43,23 @@ body {
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 1720px;
-  z-index: 9999;
+  z-index: 40;
   transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Ensure all subpage content begins below the floating fixed navbar */
+.ubex-subpage-container {
+  padding-top: 102px !important;
+}
+@media (min-width: 640px) {
+  .ubex-subpage-container {
+    padding-top: 112px !important;
+  }
+}
+@media (min-width: 1024px) {
+  .ubex-subpage-container {
+    padding-top: 122px !important;
+  }
 }
 
 .ubex-navbar-inner {

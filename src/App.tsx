@@ -2399,7 +2399,7 @@ export default function App() {
             <button 
               onClick={() => setActiveView("checkout")}
               title="View Cart"
-              className={`relative ubex-nav-control flex items-center gap-1.5 focus:outline-none cursor-pointer ${activeView === "checkout" ? "bg-amber-500 text-indigo-950 font-bold border-amber-400" : ""}`}
+              className={`relative ubex-nav-control hidden lg:flex items-center gap-1.5 focus:outline-none cursor-pointer ${activeView === "checkout" ? "bg-amber-500 text-indigo-950 font-bold border-amber-400" : ""}`}
             >
               <span>🛒</span>
               <span className="hidden xl:inline font-semibold">{getMegaTranslation(lang, "cart", "title")}</span>
@@ -2413,7 +2413,7 @@ export default function App() {
             {/* My Bookings History Badge */}
             <button 
               onClick={() => setShowBookingsPanel(true)}
-              className="relative ubex-nav-control flex items-center gap-1.5 focus:outline-none cursor-pointer"
+              className="relative ubex-nav-control hidden lg:flex items-center gap-1.5 focus:outline-none cursor-pointer"
               title="My Bookings"
             >
               <Compass className="w-3.5 h-3.5 text-amber-300 animate-spin-slow" />
@@ -2432,7 +2432,7 @@ export default function App() {
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               title="Adventure Passport"
-              className={`relative ubex-nav-control flex items-center gap-1.5 focus:outline-none cursor-pointer ${
+              className={`relative ubex-nav-control hidden lg:flex items-center gap-1.5 focus:outline-none cursor-pointer ${
                 activeView === "passport" 
                   ? "bg-amber-400 text-slate-950 font-extrabold border-amber-300" 
                   : "hover:border-indigo-400/50"
@@ -2443,7 +2443,7 @@ export default function App() {
             </button>
 
             {/* LANGUAGE SELECTOR */}
-            <div className="ubex-dropdown-wrap dropdown">
+            <div className="ubex-dropdown-wrap dropdown hidden lg:block">
               <button className="ubex-nav-control flex items-center gap-1 focus:outline-none">
                 <span>🌍</span>
                 <span className="font-semibold text-white tracking-wide uppercase text-xs">{lang}</span>
@@ -2466,7 +2466,7 @@ export default function App() {
             </div>
 
             {/* CURRENCY SELECTOR */}
-            <div className="ubex-dropdown-wrap dropdown">
+            <div className="ubex-dropdown-wrap dropdown hidden lg:block">
               <button className="ubex-nav-control flex items-center gap-1 focus:outline-none">
                 <span>💱</span>
                 <span className="font-semibold text-white tracking-wide uppercase text-xs">{currency}</span>
@@ -2519,7 +2519,7 @@ export default function App() {
             {FEATURES.ADMIN_OS_ENABLED && isAdmin && (
               <button 
                 onClick={() => setShowAdminDashboard(true)}
-                className="h-[30px] px-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-[10px] rounded-md flex items-center gap-1 shadow-md active:scale-95 focus:outline-none cursor-pointer border-0 shrink-0"
+                className="h-[30px] px-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-[10px] rounded-md hidden lg:flex items-center gap-1 shadow-md active:scale-95 focus:outline-none cursor-pointer border-0 shrink-0"
                 title="CMS Admin Dashboard"
               >
                 <span>📊 CMS</span>
@@ -2686,124 +2686,159 @@ export default function App() {
                 <span>📊 Host CMS Pricing Sync</span> <ChevronRight className="w-4 h-4 text-emerald-500" />
               </button>
             )}
+
+            {/* Mobile Language & Currency Selectors */}
+            <div className="border-t border-white/10 pt-4 mt-2 space-y-4">
+              {/* LANGUAGE SELECTOR FOR MOBILE */}
+              <div className="flex flex-col gap-1.5 text-left">
+                <label className="text-[10px] font-bold text-indigo-400 tracking-wider">LANGUAGE</label>
+                <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1">
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "EN" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("EN"); localStorage.setItem("ubexLanguage", "EN"); }}>🇬🇧 EN</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "HI" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("HI"); localStorage.setItem("ubexLanguage", "HI"); }}>🇮🇳 HI</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "RU" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("RU"); localStorage.setItem("ubexLanguage", "RU"); }}>🇷🇺 RU</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "ZH" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("ZH"); localStorage.setItem("ubexLanguage", "ZH"); }}>🇨🇳 ZH</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "FR" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("FR"); localStorage.setItem("ubexLanguage", "FR"); }}>🇫🇷 FR</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "DE" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("DE"); localStorage.setItem("ubexLanguage", "DE"); }}>🇩🇪 DE</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "ES" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("ES"); localStorage.setItem("ubexLanguage", "ES"); }}>🇪🇸 ES</button>
+                  <button className={`py-1.5 px-3 rounded-lg text-xs font-semibold text-left border ${lang === "IT" ? "bg-indigo-600 text-white border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setLang("IT"); localStorage.setItem("ubexLanguage", "IT"); }}>🇮🇹 IT</button>
+                </div>
+              </div>
+
+              {/* CURRENCY SELECTOR FOR MOBILE */}
+              <div className="flex flex-col gap-1.5 text-left">
+                <label className="text-[10px] font-bold text-indigo-400 tracking-wider">CURRENCY</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "INR" ? "bg-amber-500 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("INR"); localStorage.setItem("ubexCurrency", "INR"); }}>₹ INR</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "USD" ? "bg-amber-500 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("USD"); localStorage.setItem("ubexCurrency", "USD"); }}>$ USD</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "EUR" ? "bg-amber-500 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("EUR"); localStorage.setItem("ubexCurrency", "EUR"); }}>€ EUR</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "GBP" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("GBP"); localStorage.setItem("ubexCurrency", "GBP"); }}>£ GBP</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "RUB" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("RUB"); localStorage.setItem("ubexCurrency", "RUB"); }}>₽ RUB</button>
+                  <button className={`py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold text-center border ${currency === "CNY" ? "bg-amber-550 text-indigo-950 border-transparent" : "bg-white/10 text-slate-200 border-white/5"}`} onClick={() => { setCurrency("CNY"); localStorage.setItem("ubexCurrency", "CNY"); }}>¥ CNY</button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </nav>
 
-      {activeView === "stays" ? (
-        <StaysPage 
-          currency={currency} 
-          convertAndFormatPrice={convertAndFormatPrice} 
-          onBookStay={handleBookStay} 
-          sheetsPrices={isSyncEnabled ? sheetsPrices : undefined}
-          initialCategory={activeStaysCategory}
-          externalCheckInDate={checkInDate}
-          setExternalCheckInDate={setCheckInDate}
-          externalCheckOutDate={checkOutDate}
-          setExternalCheckOutDate={setCheckOutDate}
-          externalGuestsCount={adults + childrenCount}
-          setExternalGuestsCount={(gVal) => {
-            if (gVal > 1) {
-              setAdults(gVal - 1);
-              setChildrenCount(1);
-            } else {
-              setAdults(1);
-              setChildrenCount(0);
-            }
-          }}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          lang={lang}
-          externalSelectedVibes={homeSelectedVibes}
-          setExternalSelectedVibes={setHomeSelectedVibes}
-          flexibleSearchMode={flexibleSearchMode}
-          flexibleSearchResults={flexibleSearchResults}
-          onClearFlexibleSearch={() => {
-            setFlexibleSearchMode(null);
-            setFlexibleSearchResults(null);
-          }}
-        />
-      ) : activeView === "community" ? (
-        <CommunityPage 
-          currentUser={currentUser}
-          googleCalendarToken={googleCalendarToken}
-          setGoogleCalendarToken={setGoogleCalendarToken}
-          lang={lang}
-        />
-      ) : activeView === "experiences" ? (
-        <ExperiencesPage 
-          currency={currency}
-          convertAndFormatPrice={convertAndFormatPrice}
-          sheetsPrices={isSyncEnabled ? sheetsPrices : undefined}
-          cartExperiences={cartExperiences}
-          setCartExperiences={setCartExperiences}
-          switchToTab={(tab) => {
-            setActiveView(tab);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          lang={lang}
-          externalSelectedCategory={selectedCategory}
-          setExternalSelectedCategory={setSelectedCategory}
-        />
-      ) : activeView === "corporate" ? (
-        <CorporatePage 
-          convertAndFormatPrice={convertAndFormatPrice}
-          currency={currency}
-          lang={lang}
-          externalSelectedRetreat={selectedCorporateRetreat}
-          setExternalSelectedRetreat={setSelectedCorporateRetreat}
-        />
-      ) : activeView === "checkout" ? (
-        <CheckoutPage 
-          currency={currency}
-          convertAndFormatPrice={convertAndFormatPrice}
-          cartStays={cartStays}
-          cartExperiences={cartExperiences}
-          setCartStays={setCartStays}
-          setCartExperiences={setCartExperiences}
-          onCompleteBooking={handleCompleteBooking}
-          currencySymbol={currency === "INR" ? "₹" : currency === "EUR" ? "€" : "$"}
-          switchToTab={(tab) => {
-            setActiveView(tab);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          lang={lang}
-          currentUser={currentUser}
-        />
-      ) : activeView === "passport" ? (
-        <PassportDashboard 
-          currentUser={currentUser}
-          authHeader={userToken ? `Bearer ${userToken}` : undefined}
-          lang={lang}
-          currencySymbol={currency === "INR" ? "₹" : currency === "EUR" ? "€" : "$"}
-          convertAndFormatPrice={convertAndFormatPrice}
-        />
-      ) : (activeView === "review" || activeView === "share-your-story") ? (
-        <ShareYourStoryPage
-          lang={lang}
-          currency={currency}
-          uid={currentUser?.uid}
-          userEmail={currentUser?.email}
-          userName={currentUser?.displayName}
-          setActiveTabInApp={(tab) => {
-            setActiveView(tab);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-        />
-      ) : activeView === "about" ? (
-        <AboutUsPage setActiveTabInApp={setActiveView} />
-      ) : activeView === "blog" ? (
-        <BlogPage setActiveTabInApp={setActiveView} />
-      ) : activeView === "careers" ? (
-        <CareersPage setActiveTabInApp={setActiveView} />
-      ) : activeView === "partner" ? (
-        <PartnerPage setActiveTabInApp={setActiveView} />
-      ) : activeView === "faqs" ? (
-        <FaqsPage setActiveTabInApp={setActiveView} />
-      ) : activeView === "contact" ? (
-        <ContactPage setActiveTabInApp={setActiveView} />
+      {activeView !== "home" ? (
+        <div className="ubex-subpage-container flex-1 w-full flex flex-col">
+          {activeView === "stays" ? (
+            <StaysPage 
+              currency={currency} 
+              convertAndFormatPrice={convertAndFormatPrice} 
+              onBookStay={handleBookStay} 
+              sheetsPrices={isSyncEnabled ? sheetsPrices : undefined}
+              initialCategory={activeStaysCategory}
+              externalCheckInDate={checkInDate}
+              setExternalCheckInDate={setCheckInDate}
+              externalCheckOutDate={checkOutDate}
+              setExternalCheckOutDate={setCheckOutDate}
+              externalGuestsCount={adults + childrenCount}
+              setExternalGuestsCount={(gVal) => {
+                if (gVal > 1) {
+                  setAdults(gVal - 1);
+                  setChildrenCount(1);
+                } else {
+                  setAdults(1);
+                  setChildrenCount(0);
+                }
+              }}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              lang={lang}
+              externalSelectedVibes={homeSelectedVibes}
+              setExternalSelectedVibes={setHomeSelectedVibes}
+              flexibleSearchMode={flexibleSearchMode}
+              flexibleSearchResults={flexibleSearchResults}
+              onClearFlexibleSearch={() => {
+                setFlexibleSearchMode(null);
+                setFlexibleSearchResults(null);
+              }}
+            />
+          ) : activeView === "community" ? (
+            <CommunityPage 
+              currentUser={currentUser}
+              googleCalendarToken={googleCalendarToken}
+              setGoogleCalendarToken={setGoogleCalendarToken}
+              lang={lang}
+            />
+          ) : activeView === "experiences" ? (
+            <ExperiencesPage 
+              currency={currency}
+              convertAndFormatPrice={convertAndFormatPrice}
+              sheetsPrices={isSyncEnabled ? sheetsPrices : undefined}
+              cartExperiences={cartExperiences}
+              setCartExperiences={setCartExperiences}
+              switchToTab={(tab) => {
+                setActiveView(tab);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              lang={lang}
+              externalSelectedCategory={selectedCategory}
+              setExternalSelectedCategory={setSelectedCategory}
+            />
+          ) : activeView === "corporate" ? (
+            <CorporatePage 
+              convertAndFormatPrice={convertAndFormatPrice}
+              currency={currency}
+              lang={lang}
+              externalSelectedRetreat={selectedCorporateRetreat}
+              setExternalSelectedRetreat={setSelectedCorporateRetreat}
+            />
+          ) : activeView === "checkout" ? (
+            <CheckoutPage 
+              currency={currency}
+              convertAndFormatPrice={convertAndFormatPrice}
+              cartStays={cartStays}
+              cartExperiences={cartExperiences}
+              setCartStays={setCartStays}
+              setCartExperiences={setCartExperiences}
+              onCompleteBooking={handleCompleteBooking}
+              currencySymbol={currency === "INR" ? "₹" : currency === "EUR" ? "€" : "$"}
+              switchToTab={(tab) => {
+                setActiveView(tab);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              lang={lang}
+              currentUser={currentUser}
+            />
+          ) : activeView === "passport" ? (
+            <PassportDashboard 
+              currentUser={currentUser}
+              authHeader={userToken ? `Bearer ${userToken}` : undefined}
+              lang={lang}
+              currencySymbol={currency === "INR" ? "₹" : currency === "EUR" ? "€" : "$"}
+              convertAndFormatPrice={convertAndFormatPrice}
+            />
+          ) : (activeView === "review" || activeView === "share-your-story") ? (
+            <ShareYourStoryPage
+              lang={lang}
+              currency={currency}
+              uid={currentUser?.uid}
+              userEmail={currentUser?.email}
+              userName={currentUser?.displayName}
+              setActiveTabInApp={(tab) => {
+                setActiveView(tab);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          ) : activeView === "about" ? (
+            <AboutUsPage setActiveTabInApp={setActiveView} />
+          ) : activeView === "blog" ? (
+            <BlogPage setActiveTabInApp={setActiveView} />
+          ) : activeView === "careers" ? (
+            <CareersPage setActiveTabInApp={setActiveView} />
+          ) : activeView === "partner" ? (
+            <PartnerPage setActiveTabInApp={setActiveView} />
+          ) : activeView === "faqs" ? (
+            <FaqsPage setActiveTabInApp={setActiveView} />
+          ) : activeView === "contact" ? (
+            <ContactPage setActiveTabInApp={setActiveView} />
+          ) : null}
+        </div>
       ) : (
         <>
           {/* ==========================================
