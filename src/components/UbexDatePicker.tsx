@@ -217,6 +217,7 @@ export const UbexDatePicker: React.FC<UbexDatePickerProps> = ({
         position: "relative", 
         top: "auto", 
         left: "auto",
+        transform: "none",
         fontFamily: "'Comfortaa', sans-serif" 
       }}
     >

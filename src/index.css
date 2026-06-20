@@ -842,6 +842,8 @@ body {
   top: calc(100% + 14px);
   left: 0;
   width: 320px;
+  max-width: 100%;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
@@ -849,7 +851,7 @@ body {
   border-radius: 20px;
   padding: 14px;
   box-shadow: 0 24px 60px rgba(0, 17, 102, 0.14);
-  z-index: 999999;
+  z-index: 9999999;
 }
 
 .ubex-dp-header {
@@ -1152,9 +1154,8 @@ body {
   }
 
   .ubex-datepicker {
-    left: 50%;
-    transform: translateX(-50%);
     width: min(440px, 92vw);
+    max-width: 100%;
   }
 
   .ubex-guestpicker {

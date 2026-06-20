@@ -11,6 +11,18 @@ if (process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_STATIC_URL) {
   }
 }
 
+// Log presence checks safely for Railway deployment debugging without leaking values
+console.log("======================================================================");
+console.log("[CONFIG CHECK] ENVIRONMENT INITIALIZATION DIAGNOSTICS:");
+console.log(`[CONFIG CHECK] NODE_ENV: ${process.env.NODE_ENV || "development"}`);
+console.log(`[CONFIG CHECK] JWT_SECRET: ${process.env.JWT_SECRET ? "✓ Found" : "✗ Missing"}`);
+console.log(`[CONFIG CHECK] CSRF_SECRET: ${process.env.CSRF_SECRET ? "✓ Found" : "✗ Missing"}`);
+console.log(`[CONFIG CHECK] ADMIN_SEED_EMAIL: ${process.env.ADMIN_SEED_EMAIL ? "✓ Found" : "✗ Missing"}`);
+console.log(`[CONFIG CHECK] ADMIN_SEED_PASSWORD: ${process.env.ADMIN_SEED_PASSWORD ? "✓ Found" : "✗ Missing"}`);
+console.log(`[CONFIG CHECK] RAZORPAY_KEY_ID: ${process.env.RAZORPAY_KEY_ID ? "✓ Found" : "✗ Missing"}`);
+console.log(`[CONFIG CHECK] RAZORPAY_KEY_SECRET: ${process.env.RAZORPAY_KEY_SECRET ? "✓ Found" : "✗ Missing"}`);
+console.log("======================================================================\n");
+
 // Apply smart development fallbacks using CRYPTOGRAPHICALLY SECURE runtime-generated values if they are not provided, weak, or set to static fallbacks
 if (process.env.NODE_ENV !== "production") {
   const needsJwtGen = !process.env.JWT_SECRET || 

@@ -1220,7 +1220,7 @@ export default function App() {
       // Try loading Razorpay client script
       const scriptSuccess = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
       
-      if (scriptSuccess && (window as any).Razorpay) {
+      if (scriptSuccess && (window as any).Razorpay && !orderData.isMock) {
         // Run standard interactive overlay handler
         const options = {
           key: orderData.keyId,

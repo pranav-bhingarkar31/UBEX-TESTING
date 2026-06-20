@@ -2120,13 +2120,13 @@ export default function StaysPage({
                     {showDatePickerPopup && (
                       <>
                         <div 
-                          className="fixed inset-0 z-40 bg-transparent" 
+                          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] md:bg-transparent md:backdrop-blur-none" 
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowDatePickerPopup(false);
                           }}
                         />
-                        <div className="absolute top-[108%] right-0 z-50 w-[320px] max-w-[90vw] select-none">
+                        <div className="fixed md:absolute top-1/2 md:top-[108%] left-1/2 md:left-auto md:right-0 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 z-50 w-[92vw] max-w-[340px] md:w-[320px] md:max-w-none select-none">
                           <UbexDatePicker
                           checkIn={checkInDate}
                           checkOut={checkOutDate}

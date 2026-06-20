@@ -18,12 +18,21 @@ export const PaymentService = {
   getCredentials() {
     const keyId = process.env.RAZORPAY_KEY_ID || "";
     const keySecret = process.env.RAZORPAY_KEY_SECRET || "";
-    const isDev = process.env.NODE_ENV === "development";
-    const hasKeys = keyId && keySecret && keyId !== "MY_RAZORPAY_KEY_ID" && keySecret !== "MY_RAZORPAY_KEY_SECRET";
-    const isMock = !hasKeys && isDev;
+    
+    // Check if keys are active and not defaults or placeholders
+    const isPlaceholder = (val: string) => {
+      const v = val.toLowerCase();
+      return v.includes("yourkeyidhere") || 
+             v.includes("keysecrethere") || 
+             v.includes("my_razorpay") || 
+             v.includes("yourrazorpay");
+    };
+    
+    const hasKeys = keyId && keySecret && !isPlaceholder(keyId) && !isPlaceholder(keySecret);
+    const isMock = !hasKeys; // Allow mock / simulation mode in production too for Friends & Family Beta
 
-    if (!hasKeys && !isDev) {
-      throw new Error("Razorpay credentials are required in production configuration.");
+    if (isMock) {
+      console.warn("[PAYMENT SERVICE] WARNING: Active Razorpay keys are not configured or are set to placeholder values. Payment Service will operate in secure checkout simulation fallback mode.");
     }
     
     return {
